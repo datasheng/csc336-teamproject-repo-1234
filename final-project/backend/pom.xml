@@ -88,6 +88,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Mockito subclass mock maker for Java 21+ -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-subclass</artifactId>
+            <version>5.14.2</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- H2 Database for testing -->
         <dependency>
             <groupId>com.h2database</groupId>
@@ -109,6 +117,16 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                    </argLine>
+                </configuration>
             </plugin>
         </plugins>
     </build>
