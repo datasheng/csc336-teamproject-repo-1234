@@ -1,6 +1,7 @@
 package com.campusevents.controller;
 
 import com.campusevents.dto.ErrorResponse;
+import com.campusevents.dto.OrganizationDTO;
 import com.campusevents.dto.UpdateUserProfileRequest;
 import com.campusevents.dto.UserProfileDTO;
 import com.campusevents.model.User;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -140,6 +142,41 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ErrorResponse("Internal Server Error", "An error occurred while updating user profile", 500)
+            );
+        }
+    }
+    
+    /**
+     * Get organizations that the current user leads.
+     * 
+     * Requires valid JWT token in Authorization header.
+     * 
+     * @param user The authenticated user (injected by @CurrentUser)
+     * @return Array of organizations the user leads
+     */
+    @GetMapping("/me/organizations")
+    public ResponseEntity<?> getCurrentUserOrganizations(@CurrentUser User user) {
+        try {
+            String sql = "SELECT o.id, o.name, o.description " +
+                         "FROM org_leadership ol " +
+                         "JOIN organization o ON ol.org_id = o.id " +
+                         "WHERE ol.user_id = ? " +
+                         "ORDER BY o.name";
+            List<Map<String, Object>> results = sqlExecutor.executeQuery(sql, new Object[]{user.getId()});
+            
+            List<OrganizationDTO> organizations = new ArrayList<>();
+            for (Map<String, Object> row : results) {
+                organizations.add(new OrganizationDTO(
+                    ((Number) row.get("id")).longValue(),
+                    (String) row.get("name"),
+                    (String) row.get("description")
+                ));
+            }
+            
+            return ResponseEntity.ok(organizations);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new ErrorResponse("Internal Server Error", "An error occurred while fetching user organizations", 500)
             );
         }
     }
