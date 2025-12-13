@@ -4,8 +4,10 @@ import com.campusevents.dto.ErrorResponse;
 import com.campusevents.dto.OrganizationDTO;
 import com.campusevents.dto.UpdateUserProfileRequest;
 import com.campusevents.dto.UserProfileDTO;
+import com.campusevents.dto.UserTicketDTO;
 import com.campusevents.model.User;
 import com.campusevents.security.CurrentUser;
+import com.campusevents.service.TicketService;
 import com.campusevents.util.SqlExecutor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,15 +23,19 @@ import java.util.Map;
  * Endpoints:
  * - GET /api/users/me - Get current user profile (authenticated)
  * - PUT /api/users/me - Update current user profile (authenticated)
+ * - GET /api/users/me/tickets - Get current user's tickets (authenticated)
+ * - GET /api/users/me/organizations - Get organizations user leads (authenticated)
  */
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
     
     private final SqlExecutor sqlExecutor;
+    private final TicketService ticketService;
     
-    public UserController(SqlExecutor sqlExecutor) {
+    public UserController(SqlExecutor sqlExecutor, TicketService ticketService) {
         this.sqlExecutor = sqlExecutor;
+        this.ticketService = ticketService;
     }
     
     /**
@@ -177,6 +183,26 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ErrorResponse("Internal Server Error", "An error occurred while fetching user organizations", 500)
+            );
+        }
+    }
+    
+    /**
+     * Get the current user's tickets with event details.
+     * 
+     * Requires valid JWT token in Authorization header.
+     * 
+     * @param user The authenticated user (injected by @CurrentUser)
+     * @return Array of user's tickets with event details
+     */
+    @GetMapping("/me/tickets")
+    public ResponseEntity<?> getCurrentUserTickets(@CurrentUser User user) {
+        try {
+            List<UserTicketDTO> tickets = ticketService.getUserTickets(user.getId());
+            return ResponseEntity.ok(tickets);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new ErrorResponse("Internal Server Error", "An error occurred while fetching user tickets", 500)
             );
         }
     }
