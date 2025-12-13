@@ -184,9 +184,9 @@ CREATE TABLE fee (
 
 COMMENT ON TABLE fee IS 'Stores fee policy at different times';
 COMMENT ON COLUMN fee.id IS 'Id of time period';
-COMMENT ON COLUMN ticket.start_time IS 'Starting time';
-COMMENT ON COLUMN ticket.end_time IS 'Ending time';
-COMMENT ON COLUMN ticket.fee_percent IS 'Decimal value(?) of fee we take';
+COMMENT ON COLUMN fee.start_time IS 'Starting time';
+COMMENT ON COLUMN fee.end_time IS 'Ending time';
+COMMENT ON COLUMN fee.fee_percent IS 'Decimal value(?) of fee we take';
 
 -- ============================================================================
 -- Indexes for common queries
