@@ -17,6 +17,7 @@ DROP TABLE IF EXISTS organization CASCADE;
 DROP TABLE IF EXISTS "user" CASCADE;
 DROP TABLE IF EXISTS campus CASCADE;
 DROP TABLE IF EXISTS city CASCADE;
+DROP TABLE IF EXISTS fee CASCADE;
 
 -- ============================================================================
 -- City table
@@ -156,9 +157,11 @@ CREATE TABLE ticket (
     user_id INTEGER NOT NULL,
     event_id INTEGER NOT NULL,
     type VARCHAR(50) NOT NULL,
+    time_period INTEGER NOT NULL,
     PRIMARY KEY (user_id, event_id, type),
     FOREIGN KEY (user_id) REFERENCES "user"(id),
     FOREIGN KEY (event_id) REFERENCES event(id),
+    FOREIGN KEY (time_period) REFERENCES fee(id),
     FOREIGN KEY (type, event_id) REFERENCES cost(type, event_id)
 );
 
@@ -166,6 +169,24 @@ COMMENT ON TABLE ticket IS 'Stores purchased tickets';
 COMMENT ON COLUMN ticket.user_id IS 'User who purchased the ticket';
 COMMENT ON COLUMN ticket.event_id IS 'Event the ticket is for';
 COMMENT ON COLUMN ticket.type IS 'Type of ticket purchased';
+
+-- ============================================================================
+-- Fees per time table
+-- Stores what fee percent we had in each time period
+-- ============================================================================
+
+CREATE TABLE fee (
+    id INTEGER NOT NULL PRIMARY KEY,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    fee_percent float NOT NULL,
+);
+
+COMMENT ON TABLE fee IS 'Stores fee policy at different times';
+COMMENT ON COLUMN fee.id IS 'Id of time period';
+COMMENT ON COLUMN ticket.start_time IS 'Starting time';
+COMMENT ON COLUMN ticket.end_time IS 'Ending time';
+COMMENT ON COLUMN ticket.fee_percent IS 'Decimal value(?) of fee we take';
 
 -- ============================================================================
 -- Indexes for common queries
