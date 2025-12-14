@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { EventCard } from '../components/EventCard';
 import { EventDTO } from '../api/events';
+
+const renderWithRouter = (component: React.ReactElement) => {
+  return render(<BrowserRouter>{component}</BrowserRouter>);
+};
 
 describe('EventCard', () => {
   const mockEvent: EventDTO = {
@@ -23,22 +28,22 @@ describe('EventCard', () => {
   };
 
   it('should render event description', () => {
-    const { getByText } = render(<EventCard event={mockEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={mockEvent} />);
     expect(getByText('Introduction to Machine Learning Workshop')).toBeInTheDocument();
   });
 
   it('should render organizer name', () => {
-    const { getByText } = render(<EventCard event={mockEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={mockEvent} />);
     expect(getByText('Computer Science Club')).toBeInTheDocument();
   });
 
   it('should render campus name', () => {
-    const { getByText } = render(<EventCard event={mockEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={mockEvent} />);
     expect(getByText('Harvard University')).toBeInTheDocument();
   });
 
   it('should display Free when lowest price is 0', () => {
-    const { getByText } = render(<EventCard event={mockEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={mockEvent} />);
     expect(getByText('Free')).toBeInTheDocument();
   });
 
@@ -47,7 +52,7 @@ describe('EventCard', () => {
       ...mockEvent,
       costs: [{ type: 'student', cost: 15 }],
     };
-    const { getByText } = render(<EventCard event={paidEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={paidEvent} />);
     expect(getByText('$15.00')).toBeInTheDocument();
   });
 
@@ -59,17 +64,17 @@ describe('EventCard', () => {
         { type: 'general', cost: 25 },
       ],
     };
-    const { getByText } = render(<EventCard event={multiCostEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={multiCostEvent} />);
     expect(getByText('$10.00')).toBeInTheDocument();
   });
 
   it('should display tickets sold and capacity', () => {
-    const { getByText } = render(<EventCard event={mockEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={mockEvent} />);
     expect(getByText(/25 \/ 100 sold/)).toBeInTheDocument();
   });
 
   it('should display available capacity', () => {
-    const { getByText } = render(<EventCard event={mockEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={mockEvent} />);
     expect(getByText('75 spots remaining')).toBeInTheDocument();
   });
 
@@ -78,7 +83,7 @@ describe('EventCard', () => {
       ...mockEvent,
       costs: [],
     };
-    const { getByText } = render(<EventCard event={freeEvent} />);
+    const { getByText } = renderWithRouter(<EventCard event={freeEvent} />);
     expect(getByText('Free')).toBeInTheDocument();
   });
 });

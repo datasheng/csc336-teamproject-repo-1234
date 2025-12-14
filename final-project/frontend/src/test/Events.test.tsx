@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { Events } from '../pages/Events';
 import * as eventsApi from '../api/events';
 import { EventDTO } from '../api/events';
 
 vi.mock('../api/events');
+
+const renderWithRouter = (component: React.ReactElement) => {
+  return render(<BrowserRouter>{component}</BrowserRouter>);
+};
 
 describe('Events Page', () => {
   const mockEvents: EventDTO[] = [
@@ -44,13 +49,13 @@ describe('Events Page', () => {
 
   it('should display loading state initially', () => {
     vi.spyOn(eventsApi, 'getEvents').mockImplementation(() => new Promise(() => {}));
-    const { getByText } = render(<Events />);
+    const { getByText } = renderWithRouter(<Events />);
     expect(getByText('Loading events...')).toBeInTheDocument();
   });
 
   it('should display events after loading', async () => {
     vi.spyOn(eventsApi, 'getEvents').mockResolvedValue(mockEvents);
-    const { getByText } = render(<Events />);
+    const { getByText } = renderWithRouter(<Events />);
 
     await waitFor(() => {
       expect(getByText('Introduction to Machine Learning Workshop')).toBeInTheDocument();
@@ -60,7 +65,7 @@ describe('Events Page', () => {
 
   it('should display error message on fetch failure', async () => {
     vi.spyOn(eventsApi, 'getEvents').mockRejectedValue(new Error('Network Error'));
-    const { getByText } = render(<Events />);
+    const { getByText } = renderWithRouter(<Events />);
 
     await waitFor(() => {
       expect(getByText('Failed to load events. Please try again later.')).toBeInTheDocument();
@@ -69,7 +74,7 @@ describe('Events Page', () => {
 
   it('should display no events message when list is empty', async () => {
     vi.spyOn(eventsApi, 'getEvents').mockResolvedValue([]);
-    const { getByText } = render(<Events />);
+    const { getByText } = renderWithRouter(<Events />);
 
     await waitFor(() => {
       expect(getByText('No events found matching your filters.')).toBeInTheDocument();
@@ -78,7 +83,7 @@ describe('Events Page', () => {
 
   it('should render page title', async () => {
     vi.spyOn(eventsApi, 'getEvents').mockResolvedValue(mockEvents);
-    const { getByText } = render(<Events />);
+    const { getByText } = renderWithRouter(<Events />);
 
     await waitFor(() => {
       expect(getByText('Campus Events')).toBeInTheDocument();
@@ -87,7 +92,7 @@ describe('Events Page', () => {
 
   it('should render EventFilters component', async () => {
     vi.spyOn(eventsApi, 'getEvents').mockResolvedValue(mockEvents);
-    const { getByText } = render(<Events />);
+    const { getByText } = renderWithRouter(<Events />);
 
     await waitFor(() => {
       expect(getByText('Filter Events')).toBeInTheDocument();
@@ -96,7 +101,7 @@ describe('Events Page', () => {
 
   it('should call getEvents on mount', async () => {
     const getEventsSpy = vi.spyOn(eventsApi, 'getEvents').mockResolvedValue(mockEvents);
-    render(<Events />);
+    renderWithRouter(<Events />);
 
     await waitFor(() => {
       expect(getEventsSpy).toHaveBeenCalled();
