@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import { Events } from './pages/Events'
 
 function HomePage() {
   return (
@@ -32,6 +33,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/events" element={<Events />} />
     </Routes>
   )
 }
