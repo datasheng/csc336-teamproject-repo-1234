@@ -287,11 +287,11 @@ class EventControllerTest {
             event2.setCapacity(50);
             event2.setAvailableCapacity(50);
             
-            when(eventService.getEvents(null, null, null, null))
+            when(eventService.getEvents(null, null, null, null, null, null, null))
                 .thenReturn(Arrays.asList(event1, event2));
             
             // Act
-            ResponseEntity<?> response = eventController.getEvents(null, null, null, null);
+            ResponseEntity<?> response = eventController.getEvents(null, null, null, null, null, null, null);
             
             // Assert
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -307,16 +307,16 @@ class EventControllerTest {
             event.setId(1L);
             event.setCampusId(2L);
             
-            when(eventService.getEvents(2L, null, null, null))
+            when(eventService.getEvents(2L, null, null, null, null, null, null))
                 .thenReturn(Arrays.asList(event));
             
-            ResponseEntity<?> response = eventController.getEvents(2L, null, null, null);
+            ResponseEntity<?> response = eventController.getEvents(2L, null, null, null, null, null, null);
             
             assertEquals(HttpStatus.OK, response.getStatusCode());
             List<?> events = (List<?>) response.getBody();
             assertEquals(1, events.size());
             
-            verify(eventService).getEvents(2L, null, null, null);
+            verify(eventService).getEvents(2L, null, null, null, null, null, null);
         }
         
         @Test
@@ -326,13 +326,13 @@ class EventControllerTest {
             event.setId(1L);
             event.setOrganizerId(3L);
             
-            when(eventService.getEvents(null, 3L, null, null))
+            when(eventService.getEvents(null, 3L, null, null, null, null, null))
                 .thenReturn(Arrays.asList(event));
             
-            ResponseEntity<?> response = eventController.getEvents(null, 3L, null, null);
+            ResponseEntity<?> response = eventController.getEvents(null, 3L, null, null, null, null, null);
             
             assertEquals(HttpStatus.OK, response.getStatusCode());
-            verify(eventService).getEvents(null, 3L, null, null);
+            verify(eventService).getEvents(null, 3L, null, null, null, null, null);
         }
         
         @Test
@@ -341,13 +341,13 @@ class EventControllerTest {
             LocalDate startDate = LocalDate.of(2024, 3, 1);
             LocalDate endDate = LocalDate.of(2024, 3, 31);
             
-            when(eventService.getEvents(null, null, startDate, endDate))
+            when(eventService.getEvents(null, null, startDate, endDate, null, null, null))
                 .thenReturn(Collections.emptyList());
             
-            ResponseEntity<?> response = eventController.getEvents(null, null, startDate, endDate);
+            ResponseEntity<?> response = eventController.getEvents(null, null, startDate, endDate, null, null, null);
             
             assertEquals(HttpStatus.OK, response.getStatusCode());
-            verify(eventService).getEvents(null, null, startDate, endDate);
+            verify(eventService).getEvents(null, null, startDate, endDate, null, null, null);
         }
         
         @Test
@@ -356,22 +356,22 @@ class EventControllerTest {
             LocalDate startDate = LocalDate.of(2024, 3, 1);
             LocalDate endDate = LocalDate.of(2024, 3, 31);
             
-            when(eventService.getEvents(1L, 2L, startDate, endDate))
+            when(eventService.getEvents(1L, 2L, startDate, endDate, null, null, null))
                 .thenReturn(Collections.emptyList());
             
-            ResponseEntity<?> response = eventController.getEvents(1L, 2L, startDate, endDate);
+            ResponseEntity<?> response = eventController.getEvents(1L, 2L, startDate, endDate, null, null, null);
             
             assertEquals(HttpStatus.OK, response.getStatusCode());
-            verify(eventService).getEvents(1L, 2L, startDate, endDate);
+            verify(eventService).getEvents(1L, 2L, startDate, endDate, null, null, null);
         }
         
         @Test
         @DisplayName("Should return empty list when no events match")
         void shouldReturnEmptyListWhenNoEventsMatch() {
-            when(eventService.getEvents(any(), any(), any(), any()))
+            when(eventService.getEvents(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(Collections.emptyList());
             
-            ResponseEntity<?> response = eventController.getEvents(999L, null, null, null);
+            ResponseEntity<?> response = eventController.getEvents(999L, null, null, null, null, null, null);
             
             assertEquals(HttpStatus.OK, response.getStatusCode());
             List<?> events = (List<?>) response.getBody();

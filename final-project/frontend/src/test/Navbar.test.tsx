@@ -27,9 +27,11 @@ describe('Navbar', () => {
     localStorage.clear();
   });
 
-  it('should not render when user is not authenticated', () => {
-    const { container } = renderWithProviders(<Navbar />);
-    expect(container.firstChild).toBeNull();
+  it('should render login/signup navbar when user is not authenticated', () => {
+    const { getByText } = renderWithProviders(<Navbar />);
+    expect(getByText('Sign In')).toBeInTheDocument();
+    expect(getByText('Get Started')).toBeInTheDocument();
+    expect(getByText('Campus Events')).toBeInTheDocument();
   });
 
   it('should render when user is authenticated', () => {

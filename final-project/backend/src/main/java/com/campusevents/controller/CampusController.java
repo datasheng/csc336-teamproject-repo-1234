@@ -16,7 +16,7 @@ import java.util.Map;
  * REST controller for campus endpoints.
  * 
  * Endpoints:
- * - GET /api/campuses - Get campuses by city
+ * - GET /api/campuses - Get all campuses (or filter by city if city param provided)
  * - GET /api/campuses/{id} - Get campus details by ID
  */
 @RestController
@@ -30,16 +30,27 @@ public class CampusController {
     }
     
     /**
-     * Get campuses filtered by city.
+     * Get campuses, optionally filtered by city.
+     * If no city is provided, returns all campuses.
      * 
-     * @param city The city to filter by
-     * @return List of campuses in the specified city
+     * @param city Optional city to filter by
+     * @return List of campuses
      */
     @GetMapping
-    public ResponseEntity<?> getCampusesByCity(@RequestParam String city) {
+    public ResponseEntity<?> getCampuses(@RequestParam(required = false) String city) {
         try {
-            String sql = "SELECT id, name, address, zip_code, city FROM campus WHERE city = ? ORDER BY name";
-            List<Map<String, Object>> results = sqlExecutor.executeQuery(sql, new Object[]{city});
+            String sql;
+            Object[] params;
+            
+            if (city != null && !city.isEmpty()) {
+                sql = "SELECT id, name, address, zip_code, city FROM campus WHERE city = ? ORDER BY name";
+                params = new Object[]{city};
+            } else {
+                sql = "SELECT id, name, address, zip_code, city FROM campus ORDER BY name";
+                params = new Object[]{};
+            }
+            
+            List<Map<String, Object>> results = sqlExecutor.executeQuery(sql, params);
             
             List<CampusDTO> campuses = new ArrayList<>();
             for (Map<String, Object> row : results) {

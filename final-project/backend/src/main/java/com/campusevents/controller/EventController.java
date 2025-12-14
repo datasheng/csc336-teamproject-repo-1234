@@ -12,9 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.Optional;
 
 /**
@@ -45,11 +45,17 @@ public class EventController {
      * - organizerId: Filter by organizing organization
      * - startDate: Filter events starting on or after this date (YYYY-MM-DD)
      * - endDate: Filter events starting on or before this date (YYYY-MM-DD)
+     * - freeOnly: Filter to only show free events (boolean)
+     * - minPrice: Filter events with at least one ticket type at or above this price
+     * - maxPrice: Filter events with at least one ticket type at or below this price
      * 
      * @param campusId Optional campus filter
      * @param organizerId Optional organizer filter
      * @param startDate Optional start date filter
      * @param endDate Optional end date filter
+     * @param freeOnly Optional filter for free events only
+     * @param minPrice Optional minimum price filter
+     * @param maxPrice Optional maximum price filter
      * @return List of future events matching the filters
      */
     @GetMapping
@@ -57,9 +63,12 @@ public class EventController {
             @RequestParam(required = false) Long campusId,
             @RequestParam(required = false) Long organizerId,
             @RequestParam(required = false) LocalDate startDate,
-            @RequestParam(required = false) LocalDate endDate) {
+            @RequestParam(required = false) LocalDate endDate,
+            @RequestParam(required = false) Boolean freeOnly,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice) {
         try {
-            List<EventDTO> events = eventService.getEvents(campusId, organizerId, startDate, endDate);
+            List<EventDTO> events = eventService.getEvents(campusId, organizerId, startDate, endDate, freeOnly, minPrice, maxPrice);
             return ResponseEntity.ok(events);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(

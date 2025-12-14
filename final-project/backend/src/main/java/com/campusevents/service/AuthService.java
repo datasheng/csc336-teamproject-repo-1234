@@ -2,12 +2,14 @@ package com.campusevents.service;
 
 import com.campusevents.dto.AuthResponse;
 import com.campusevents.dto.LoginRequest;
+import com.campusevents.dto.OrganizationRequest;
 import com.campusevents.dto.SignupRequest;
 import com.campusevents.model.User;
 import com.campusevents.repository.UserRepository;
 import com.campusevents.security.JwtUtil;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -26,6 +28,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final OrganizationService organizationService;
     
     // Email validation regex
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
@@ -35,19 +38,21 @@ public class AuthService {
     // Minimum password length
     private static final int MIN_PASSWORD_LENGTH = 8;
     
-    public AuthService(UserRepository userRepository, JwtUtil jwtUtil) {
+    public AuthService(UserRepository userRepository, JwtUtil jwtUtil, OrganizationService organizationService) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = new BCryptPasswordEncoder();
+        this.organizationService = organizationService;
     }
     
     /**
-     * Register a new user.
+     * Register a new user. Optionally creates an organization.
      * 
      * @param request The signup request with user details
      * @return AuthResponse with JWT token
      * @throws IllegalArgumentException if validation fails
      */
+    @Transactional
     public AuthResponse signup(SignupRequest request) {
         // Validate input
         validateSignupRequest(request);
@@ -70,6 +75,17 @@ public class AuthService {
         );
         
         user = userRepository.save(user);
+        
+        // Create organization if requested
+        if (Boolean.TRUE.equals(request.getCreateOrganization()) && 
+            request.getOrganizationName() != null && 
+            !request.getOrganizationName().isBlank()) {
+            OrganizationRequest orgRequest = new OrganizationRequest(
+                request.getOrganizationName(),
+                request.getOrganizationDescription()
+            );
+            organizationService.createOrganization(orgRequest, user.getId());
+        }
         
         // Generate JWT token
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getCampusId());

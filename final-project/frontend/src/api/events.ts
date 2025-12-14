@@ -25,6 +25,9 @@ export interface EventFilters {
   organizerId?: number;
   startDate?: string;
   endDate?: string;
+  freeOnly?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export interface ErrorResponse {
@@ -55,6 +58,15 @@ export const getEvents = async (filters?: EventFilters): Promise<EventDTO[]> => 
     }
     if (filters?.endDate) {
       params.append('endDate', filters.endDate);
+    }
+    if (filters?.freeOnly) {
+      params.append('freeOnly', 'true');
+    }
+    if (filters?.minPrice !== undefined) {
+      params.append('minPrice', filters.minPrice.toString());
+    }
+    if (filters?.maxPrice !== undefined) {
+      params.append('maxPrice', filters.maxPrice.toString());
     }
 
     const response = await apiClient.get<EventDTO[]>('/events', {

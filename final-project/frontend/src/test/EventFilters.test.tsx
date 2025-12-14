@@ -1,59 +1,91 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, fireEvent, waitFor, screen } from '@testing-library/react';
 import { EventFilters } from '../components/EventFilters';
+import * as campusApi from '../api/campuses';
+
+// Mock the campus API
+vi.mock('../api/campuses', () => ({
+  getAllCampuses: vi.fn(),
+}));
 
 describe('EventFilters', () => {
-  it('should render filter inputs', () => {
-    const mockOnFilterChange = vi.fn();
-    const { getByLabelText } = render(<EventFilters onFilterChange={mockOnFilterChange} />);
+  const mockCampuses = [
+    { id: 1, name: 'Harvard University', address: '123 Test', zipCode: '02138', city: 'Cambridge' },
+    { id: 2, name: 'Stanford University', address: '456 Test', zipCode: '94305', city: 'Stanford' },
+  ];
 
-    expect(getByLabelText('Campus ID')).toBeInTheDocument();
-    expect(getByLabelText('Start Date')).toBeInTheDocument();
-    expect(getByLabelText('End Date')).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(campusApi.getAllCampuses).mockResolvedValue(mockCampuses);
   });
 
-  it('should render Apply Filters and Clear buttons', () => {
+  it('should render filter inputs', async () => {
     const mockOnFilterChange = vi.fn();
-    const { getByText } = render(<EventFilters onFilterChange={mockOnFilterChange} />);
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
 
-    expect(getByText('Apply Filters')).toBeInTheDocument();
-    expect(getByText('Clear')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /campus/i })).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText('Start Date')).toBeInTheDocument();
+    expect(screen.getByLabelText('End Date')).toBeInTheDocument();
   });
 
-  it('should call onFilterChange with empty filters when Clear is clicked', () => {
+  it('should render Apply Filters and Clear Filters buttons', async () => {
     const mockOnFilterChange = vi.fn();
-    const { getByText } = render(<EventFilters onFilterChange={mockOnFilterChange} />);
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
 
-    const clearButton = getByText('Clear');
+    await waitFor(() => {
+      expect(screen.getByText('Apply Filters')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Clear Filters')).toBeInTheDocument();
+  });
+
+  it('should call onFilterChange with empty filters when Clear is clicked', async () => {
+    const mockOnFilterChange = vi.fn();
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Clear Filters')).toBeInTheDocument();
+    });
+
+    const clearButton = screen.getByText('Clear Filters');
     fireEvent.click(clearButton);
 
     expect(mockOnFilterChange).toHaveBeenCalledWith({});
   });
 
-  it('should call onFilterChange with campusId filter', () => {
+  it('should call onFilterChange with campusId filter', async () => {
     const mockOnFilterChange = vi.fn();
-    const { getByLabelText, getByText } = render(<EventFilters onFilterChange={mockOnFilterChange} />);
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
 
-    const campusInput = getByLabelText('Campus ID');
-    fireEvent.change(campusInput, { target: { value: '1' } });
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Harvard University' })).toBeInTheDocument();
+    });
 
-    const applyButton = getByText('Apply Filters');
+    const campusDropdown = screen.getByRole('combobox', { name: /campus/i });
+    fireEvent.change(campusDropdown, { target: { value: '1' } });
+
+    const applyButton = screen.getByText('Apply Filters');
     fireEvent.click(applyButton);
 
     expect(mockOnFilterChange).toHaveBeenCalledWith({ campusId: 1 });
   });
 
-  it('should call onFilterChange with date filters', () => {
+  it('should call onFilterChange with date filters', async () => {
     const mockOnFilterChange = vi.fn();
-    const { getByLabelText, getByText } = render(<EventFilters onFilterChange={mockOnFilterChange} />);
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
 
-    const startDateInput = getByLabelText('Start Date');
-    const endDateInput = getByLabelText('End Date');
+    await waitFor(() => {
+      expect(screen.getByLabelText('Start Date')).toBeInTheDocument();
+    });
+
+    const startDateInput = screen.getByLabelText('Start Date');
+    const endDateInput = screen.getByLabelText('End Date');
 
     fireEvent.change(startDateInput, { target: { value: '2025-01-01' } });
     fireEvent.change(endDateInput, { target: { value: '2025-12-31' } });
 
-    const applyButton = getByText('Apply Filters');
+    const applyButton = screen.getByText('Apply Filters');
     fireEvent.click(applyButton);
 
     expect(mockOnFilterChange).toHaveBeenCalledWith({
@@ -62,19 +94,23 @@ describe('EventFilters', () => {
     });
   });
 
-  it('should call onFilterChange with all filters', () => {
+  it('should call onFilterChange with all filters', async () => {
     const mockOnFilterChange = vi.fn();
-    const { getByLabelText, getByText } = render(<EventFilters onFilterChange={mockOnFilterChange} />);
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
 
-    const campusInput = getByLabelText('Campus ID');
-    const startDateInput = getByLabelText('Start Date');
-    const endDateInput = getByLabelText('End Date');
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Stanford University' })).toBeInTheDocument();
+    });
 
-    fireEvent.change(campusInput, { target: { value: '2' } });
+    const campusDropdown = screen.getByRole('combobox', { name: /campus/i });
+    const startDateInput = screen.getByLabelText('Start Date');
+    const endDateInput = screen.getByLabelText('End Date');
+
+    fireEvent.change(campusDropdown, { target: { value: '2' } });
     fireEvent.change(startDateInput, { target: { value: '2025-01-01' } });
     fireEvent.change(endDateInput, { target: { value: '2025-12-31' } });
 
-    const applyButton = getByText('Apply Filters');
+    const applyButton = screen.getByText('Apply Filters');
     fireEvent.click(applyButton);
 
     expect(mockOnFilterChange).toHaveBeenCalledWith({
@@ -84,23 +120,45 @@ describe('EventFilters', () => {
     });
   });
 
-  it('should clear all inputs when Clear is clicked', () => {
+  it('should clear all inputs when Clear Filters is clicked', async () => {
     const mockOnFilterChange = vi.fn();
-    const { getByLabelText, getByText } = render(<EventFilters onFilterChange={mockOnFilterChange} />);
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
 
-    const campusInput = getByLabelText('Campus ID') as HTMLInputElement;
-    const startDateInput = getByLabelText('Start Date') as HTMLInputElement;
-    const endDateInput = getByLabelText('End Date') as HTMLInputElement;
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Harvard University' })).toBeInTheDocument();
+    });
 
-    fireEvent.change(campusInput, { target: { value: '1' } });
+    const campusDropdown = screen.getByRole('combobox', { name: /campus/i }) as HTMLSelectElement;
+    const startDateInput = screen.getByLabelText('Start Date') as HTMLInputElement;
+    const endDateInput = screen.getByLabelText('End Date') as HTMLInputElement;
+
+    fireEvent.change(campusDropdown, { target: { value: '1' } });
     fireEvent.change(startDateInput, { target: { value: '2025-01-01' } });
     fireEvent.change(endDateInput, { target: { value: '2025-12-31' } });
 
-    const clearButton = getByText('Clear');
+    const clearButton = screen.getByText('Clear Filters');
     fireEvent.click(clearButton);
 
-    expect(campusInput.value).toBe('');
+    expect(campusDropdown.value).toBe('');
     expect(startDateInput.value).toBe('');
     expect(endDateInput.value).toBe('');
+  });
+
+  it('should show All Campuses option in dropdown', async () => {
+    const mockOnFilterChange = vi.fn();
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'All Campuses' })).toBeInTheDocument();
+    });
+  });
+
+  it('should fetch campuses on mount', async () => {
+    const mockOnFilterChange = vi.fn();
+    render(<EventFilters onFilterChange={mockOnFilterChange} />);
+
+    await waitFor(() => {
+      expect(campusApi.getAllCampuses).toHaveBeenCalledTimes(1);
+    });
   });
 });

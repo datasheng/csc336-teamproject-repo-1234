@@ -26,6 +26,7 @@ class AuthServiceTest {
     
     private UserRepository userRepository;
     private JwtUtil jwtUtil;
+    private OrganizationService organizationService;
     private AuthService authService;
     
     @BeforeEach
@@ -33,7 +34,8 @@ class AuthServiceTest {
         // Use mock() instead of @Mock annotation for Java 23 compatibility
         userRepository = mock(UserRepository.class);
         jwtUtil = mock(JwtUtil.class);
-        authService = new AuthService(userRepository, jwtUtil);
+        organizationService = mock(OrganizationService.class);
+        authService = new AuthService(userRepository, jwtUtil, organizationService);
     }
     
     @Nested

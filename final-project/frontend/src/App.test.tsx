@@ -29,19 +29,19 @@ describe('App', () => {
 
   it('displays the subtitle message', () => {
     renderApp()
-    expect(screen.getByText('Discover and attend campus events')).toBeInTheDocument()
+    expect(screen.getByText('Discover, organize, and attend amazing campus events')).toBeInTheDocument()
   })
 
-  it('displays the description text', () => {
+  it('displays the welcome message', () => {
     renderApp()
-    expect(screen.getByText(/one-stop destination/i)).toBeInTheDocument()
+    expect(screen.getByText(/Welcome to Campus Events/i)).toBeInTheDocument()
   })
 
-  it('displays feature badges', () => {
+  it('displays statistics', () => {
     renderApp()
     expect(screen.getByText(/Universities/i)).toBeInTheDocument()
-    expect(screen.getByText(/🎉 Events/i)).toBeInTheDocument()
-    expect(screen.getByText(/🎫 Tickets/i)).toBeInTheDocument()
+    expect(screen.getByText(/Active Events/i)).toBeInTheDocument()
+    expect(screen.getByText(/Students/i)).toBeInTheDocument()
   })
 
   it('has proper semantic structure', () => {

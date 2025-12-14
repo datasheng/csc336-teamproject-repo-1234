@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getEventById, EventDTO } from '../api/events';
+import { getUserTickets, UserTicketDTO } from '../api/tickets';
 import { TicketPurchaseModal } from '../components/TicketPurchaseModal';
 import { useEventUpdates } from '../hooks/useEventUpdates';
 
@@ -12,6 +13,8 @@ export const EventDetails = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const [userTicket, setUserTicket] = useState<UserTicketDTO | null>(null);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
 
   useEffect(() => {
     if (!id) {
@@ -21,6 +24,7 @@ export const EventDetails = () => {
     }
 
     fetchEvent(parseInt(id));
+    fetchUserTicketForEvent(parseInt(id));
   }, [id]);
 
   const handleEventUpdate = useCallback(() => {
@@ -45,11 +49,30 @@ export const EventDetails = () => {
     }
   };
 
+  const fetchUserTicketForEvent = async (eventId: number) => {
+    try {
+      setTicketsLoading(true);
+      const tickets = await getUserTickets();
+      const existingTicket = tickets.find(ticket => ticket.eventId === eventId);
+      setUserTicket(existingTicket || null);
+    } catch (err) {
+      console.error('Error checking user tickets:', err);
+      // Don't block the UI if we can't check tickets
+      setUserTicket(null);
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
   const handleModalClose = (purchased?: boolean) => {
     setIsPurchaseModalOpen(false);
     if (purchased) {
       setPurchaseSuccess(true);
       setTimeout(() => setPurchaseSuccess(false), 5000);
+      // Refresh user's ticket status after purchase
+      if (id) {
+        fetchUserTicketForEvent(parseInt(id));
+      }
     }
     if (id) {
       fetchEvent(parseInt(id));
@@ -203,18 +226,60 @@ export const EventDetails = () => {
               )}
             </div>
 
+            {/* Purchase success message */}
+            {purchaseSuccess && (
+              <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-green-800 font-semibold">🎉 Ticket purchased successfully!</p>
+                <p className="text-green-600 text-sm">Check your tickets in "My Tickets" page.</p>
+              </div>
+            )}
+
+            {/* Already has ticket message */}
+            {userTicket && !purchaseSuccess && (
+              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-blue-800 font-semibold">You already have a ticket for this event!</p>
+                    <p className="text-blue-600 text-sm">
+                      Ticket type: <span className="capitalize font-medium">{userTicket.type}</span>
+                      {userTicket.cost > 0 && ` • Paid: $${userTicket.cost.toFixed(2)}`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-4">
-              <button
-                onClick={() => setIsPurchaseModalOpen(true)}
-                disabled={event.availableCapacity === 0}
-                className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
-                  event.availableCapacity === 0
-                    ? 'bg-stone-100 text-stone-400 cursor-not-allowed opacity-50'
-                    : 'bg-orange-600 text-white hover:bg-orange-700'
-                }`}
-              >
-                {event.availableCapacity === 0 ? 'Sold Out' : 'Purchase Ticket'}
-              </button>
+              {ticketsLoading ? (
+                <div className="flex-1 py-3 px-6 rounded-lg font-medium bg-stone-100 text-stone-400 text-center">
+                  Checking ticket status...
+                </div>
+              ) : userTicket ? (
+                <button
+                  onClick={() => navigate('/my-tickets')}
+                  className="flex-1 py-3 px-6 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                  View My Ticket
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsPurchaseModalOpen(true)}
+                  disabled={event.availableCapacity === 0}
+                  className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
+                    event.availableCapacity === 0
+                      ? 'bg-stone-100 text-stone-400 cursor-not-allowed opacity-50'
+                      : 'bg-orange-600 text-white hover:bg-orange-700'
+                  }`}
+                >
+                  {event.availableCapacity === 0 ? 'Sold Out' : 'Purchase Ticket'}
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -7,6 +7,9 @@ export interface SignupRequest {
   email: string;
   password: string;
   campusId: number;
+  createOrganization?: boolean;
+  organizationName?: string;
+  organizationDescription?: string;
 }
 
 export interface LoginRequest {

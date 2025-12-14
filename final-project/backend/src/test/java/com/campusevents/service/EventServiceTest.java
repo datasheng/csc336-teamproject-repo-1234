@@ -351,7 +351,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(null, null, null, null);
+            List<EventDTO> result = eventService.getEvents(null, null, null, null, null, null, null);
             
             // Assert
             assertEquals(2, result.size());
@@ -387,7 +387,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(2L, null, null, null);
+            List<EventDTO> result = eventService.getEvents(2L, null, null, null, null, null, null);
             
             // Assert
             assertEquals(1, result.size());
@@ -422,7 +422,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(null, 3L, null, null);
+            List<EventDTO> result = eventService.getEvents(null, 3L, null, null, null, null, null);
             
             // Assert
             assertEquals(1, result.size());
@@ -460,7 +460,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(null, null, startDate, endDate);
+            List<EventDTO> result = eventService.getEvents(null, null, startDate, endDate, null, null, null);
             
             // Assert
             assertEquals(1, result.size());
@@ -474,7 +474,7 @@ class EventServiceTest {
                 any(Object[].class)
             )).thenReturn(Collections.emptyList());
             
-            List<EventDTO> result = eventService.getEvents(999L, null, null, null);
+            List<EventDTO> result = eventService.getEvents(999L, null, null, null, null, null, null);
             
             assertTrue(result.isEmpty());
         }
@@ -507,7 +507,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(null, null, null, null);
+            List<EventDTO> result = eventService.getEvents(null, null, null, null, null, null, null);
             
             // Assert
             assertEquals(1, result.size());

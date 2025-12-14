@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { EventFilters as EventFiltersType } from '../api/events';
+import { getAllCampuses, CampusDTO } from '../api/campuses';
 
 interface EventFiltersProps {
   onFilterChange: (filters: EventFiltersType) => void;
@@ -9,6 +10,27 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
   const [campusId, setCampusId] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [freeOnly, setFreeOnly] = useState<boolean>(false);
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [campuses, setCampuses] = useState<CampusDTO[]>([]);
+  const [loadingCampuses, setLoadingCampuses] = useState(true);
+
+  useEffect(() => {
+    fetchCampuses();
+  }, []);
+
+  const fetchCampuses = async () => {
+    try {
+      setLoadingCampuses(true);
+      const data = await getAllCampuses();
+      setCampuses(data);
+    } catch (error) {
+      console.error('Error fetching campuses:', error);
+    } finally {
+      setLoadingCampuses(false);
+    }
+  };
 
   const handleApplyFilters = () => {
     const filters: EventFiltersType = {};
@@ -22,6 +44,15 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
     if (endDate) {
       filters.endDate = endDate;
     }
+    if (freeOnly) {
+      filters.freeOnly = true;
+    }
+    if (minPrice && !freeOnly) {
+      filters.minPrice = parseFloat(minPrice);
+    }
+    if (maxPrice && !freeOnly) {
+      filters.maxPrice = parseFloat(maxPrice);
+    }
 
     onFilterChange(filters);
   };
@@ -30,6 +61,9 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
     setCampusId('');
     setStartDate('');
     setEndDate('');
+    setFreeOnly(false);
+    setMinPrice('');
+    setMaxPrice('');
     onFilterChange({});
   };
 
@@ -53,16 +87,25 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
             <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            Campus ID
+            Campus
           </label>
-          <input
-            type="number"
+          <select
             id="campusId"
             value={campusId}
             onChange={(e) => setCampusId(e.target.value)}
-            className="w-full px-5 py-3.5 border-2 border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 placeholder:text-stone-400 transition-all bg-white text-base font-medium"
-            placeholder="Enter campus ID"
-          />
+            disabled={loadingCampuses}
+            className="w-full px-5 py-3.5 border-2 border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white text-base font-medium appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+          >
+            <option value="">
+              {loadingCampuses ? 'Loading campuses...' : 'All Campuses'}
+            </option>
+            {campuses.map((campus) => (
+              <option key={campus.id} value={campus.id}>
+                {campus.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="bg-stone-50 rounded-xl p-5 border border-stone-200">
@@ -95,6 +138,59 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
             onChange={(e) => setEndDate(e.target.value)}
             className="w-full px-5 py-3.5 border-2 border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white text-base font-medium"
           />
+        </div>
+
+        <div className="bg-stone-50 rounded-xl p-5 border border-stone-200">
+          <label className="flex items-center gap-2 text-xs font-bold text-stone-600 uppercase tracking-wider mb-3">
+            <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Price
+          </label>
+          
+          <div className="flex items-center gap-3 mb-4">
+            <input
+              type="checkbox"
+              id="freeOnly"
+              checked={freeOnly}
+              onChange={(e) => setFreeOnly(e.target.checked)}
+              className="w-5 h-5 text-orange-600 border-2 border-stone-300 rounded focus:ring-orange-500 cursor-pointer"
+            />
+            <label htmlFor="freeOnly" className="text-base font-medium text-stone-700 cursor-pointer">
+              Free events only
+            </label>
+          </div>
+
+          {!freeOnly && (
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label htmlFor="minPrice" className="block text-xs text-stone-500 mb-1">Min Price</label>
+                <input
+                  type="number"
+                  id="minPrice"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  placeholder="$0"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2.5 border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white text-sm font-medium"
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="maxPrice" className="block text-xs text-stone-500 mb-1">Max Price</label>
+                <input
+                  type="number"
+                  id="maxPrice"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  placeholder="Any"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2.5 border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white text-sm font-medium"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 pt-4">

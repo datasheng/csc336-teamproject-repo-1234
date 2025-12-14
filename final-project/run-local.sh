@@ -97,10 +97,48 @@ if ! command -v npm &> /dev/null; then
 fi
 echo -e "${GREEN}✓ npm: $(npm -v)${NC}"
 
+# Helper to compute checksum (prefers shasum for macOS)
+checksum_file() {
+    if command -v shasum &> /dev/null; then
+        shasum "$1" | awk '{print $1}'
+    elif command -v sha1sum &> /dev/null; then
+        sha1sum "$1" | awk '{print $1}'
+    else
+        echo ""
+    fi
+}
+
 # Install frontend dependencies if needed
-if [ ! -d "frontend/node_modules" ]; then
+FRONTEND_DIR="frontend"
+LOCK_FILE="$FRONTEND_DIR/package-lock.json"
+HASH_FILE="$FRONTEND_DIR/node_modules/.install-hash"
+
+NEED_INSTALL=false
+
+if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
+    NEED_INSTALL=true
+elif [ -f "$LOCK_FILE" ]; then
+    CURRENT_HASH=$(checksum_file "$LOCK_FILE")
+    RECORDED_HASH=""
+    if [ -f "$HASH_FILE" ]; then
+        RECORDED_HASH=$(cat "$HASH_FILE")
+    fi
+    if [ "$CURRENT_HASH" != "$RECORDED_HASH" ]; then
+        NEED_INSTALL=true
+    fi
+else
+    NEED_INSTALL=true
+fi
+
+if [ "$NEED_INSTALL" = true ]; then
     echo -e "\n${BLUE}Installing frontend dependencies...${NC}"
-    (cd frontend && npm install)
+    (cd "$FRONTEND_DIR" && npm install)
+    if [ -f "$LOCK_FILE" ]; then
+        mkdir -p "$FRONTEND_DIR/node_modules"
+        checksum_file "$LOCK_FILE" > "$HASH_FILE"
+    fi
+else
+    echo -e "\n${GREEN}✓ Frontend dependencies already up to date${NC}"
 fi
 
 # Build backend if needed

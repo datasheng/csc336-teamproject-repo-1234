@@ -252,9 +252,13 @@ public class EventService {
      * @param organizerId Optional organizer filter
      * @param startDate Optional start date filter (events starting on or after this date)
      * @param endDate Optional end date filter (events starting on or before this date)
+     * @param freeOnly Optional filter for free events only
+     * @param minPrice Optional minimum price filter
+     * @param maxPrice Optional maximum price filter
      * @return List of events matching the filters
      */
-    public List<EventDTO> getEvents(Long campusId, Long organizerId, LocalDate startDate, LocalDate endDate) {
+    public List<EventDTO> getEvents(Long campusId, Long organizerId, LocalDate startDate, LocalDate endDate,
+                                     Boolean freeOnly, BigDecimal minPrice, BigDecimal maxPrice) {
         // Build dynamic SQL query
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT e.id, e.organizer_id, e.campus_id, e.capacity, e.description, ");
@@ -285,6 +289,23 @@ public class EventService {
         if (endDate != null) {
             sql.append("AND e.start_time <= ? ");
             params.add(Timestamp.valueOf(endDate.plusDays(1).atStartOfDay()));
+        }
+        
+        // Price filters using subqueries on the cost table
+        if (Boolean.TRUE.equals(freeOnly)) {
+            // Free events: events where the minimum cost is 0
+            sql.append("AND EXISTS (SELECT 1 FROM cost co WHERE co.event_id = e.id AND co.cost = 0) ");
+        } else {
+            if (minPrice != null) {
+                // Events with at least one ticket type >= minPrice
+                sql.append("AND EXISTS (SELECT 1 FROM cost co WHERE co.event_id = e.id AND co.cost >= ?) ");
+                params.add(minPrice);
+            }
+            if (maxPrice != null) {
+                // Events with at least one ticket type <= maxPrice
+                sql.append("AND EXISTS (SELECT 1 FROM cost co WHERE co.event_id = e.id AND co.cost <= ?) ");
+                params.add(maxPrice);
+            }
         }
         
         // Only show future events

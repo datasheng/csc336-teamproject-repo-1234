@@ -9,7 +9,6 @@ const ITEMS_PER_PAGE = 9;
 
 export const Events = () => {
   const [events, setEvents] = useState<EventDTO[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<EventDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -19,9 +18,10 @@ export const Events = () => {
     fetchEvents();
   }, []);
 
+  // Re-fetch events when filters change to use backend filtering
   useEffect(() => {
-    applyFilters();
-  }, [events, filters]);
+    fetchEvents();
+  }, [filters]);
 
   const handleEventUpdate = useCallback(() => {
     fetchEvents();
@@ -33,9 +33,9 @@ export const Events = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getEvents();
+      // Pass filters to backend for server-side filtering
+      const data = await getEvents(filters);
       setEvents(data);
-      setFilteredEvents(data);
     } catch (err) {
       setError('Failed to load events. Please try again later.');
       console.error('Error fetching events:', err);
@@ -44,37 +44,15 @@ export const Events = () => {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...events];
-
-    if (filters.campusId) {
-      filtered = filtered.filter(event => event.campusId === filters.campusId);
-    }
-
-    if (filters.startDate) {
-      filtered = filtered.filter(
-        event => new Date(event.startTime) >= new Date(filters.startDate!)
-      );
-    }
-
-    if (filters.endDate) {
-      filtered = filtered.filter(
-        event => new Date(event.endTime) <= new Date(filters.endDate!)
-      );
-    }
-
-    setFilteredEvents(filtered);
+  const handleFilterChange = (newFilters: EventFiltersType) => {
+    setFilters(newFilters);
     setCurrentPage(1);
   };
 
-  const handleFilterChange = (newFilters: EventFiltersType) => {
-    setFilters(newFilters);
-  };
-
-  const totalPages = Math.ceil(filteredEvents.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(events.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentEvents = filteredEvents.slice(startIndex, endIndex);
+  const currentEvents = events.slice(startIndex, endIndex);
 
   if (loading) {
     return (

@@ -2,6 +2,7 @@ package com.campusevents.dto;
 
 /**
  * Request DTO for user signup.
+ * Optionally allows creating an organization during signup.
  */
 public class SignupRequest {
     
@@ -10,6 +11,11 @@ public class SignupRequest {
     private String email;
     private String password;
     private Long campusId;
+    
+    // Optional organization creation fields
+    private Boolean createOrganization;
+    private String organizationName;
+    private String organizationDescription;
     
     // Default constructor
     public SignupRequest() {}
@@ -61,5 +67,29 @@ public class SignupRequest {
     
     public void setCampusId(Long campusId) {
         this.campusId = campusId;
+    }
+    
+    public Boolean getCreateOrganization() {
+        return createOrganization;
+    }
+    
+    public void setCreateOrganization(Boolean createOrganization) {
+        this.createOrganization = createOrganization;
+    }
+    
+    public String getOrganizationName() {
+        return organizationName;
+    }
+    
+    public void setOrganizationName(String organizationName) {
+        this.organizationName = organizationName;
+    }
+    
+    public String getOrganizationDescription() {
+        return organizationDescription;
+    }
+    
+    public void setOrganizationDescription(String organizationDescription) {
+        this.organizationDescription = organizationDescription;
     }
 }
