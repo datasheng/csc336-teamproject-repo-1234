@@ -150,6 +150,25 @@ COMMENT ON COLUMN cost.event_id IS 'Reference to the event';
 COMMENT ON COLUMN cost.cost IS 'Price in dollars (0.00 for free tickets)';
 
 -- ============================================================================
+-- Fees per time table
+-- Stores what fee percent we had in each time period
+-- ============================================================================
+
+CREATE TABLE fee (
+    id INTEGER NOT NULL PRIMARY KEY,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    fee_percent float NOT NULL
+);
+
+COMMENT ON TABLE fee IS 'Stores fee policy at different times';
+COMMENT ON COLUMN fee.id IS 'Id of time period';
+COMMENT ON COLUMN fee.start_time IS 'Starting time';
+COMMENT ON COLUMN fee.end_time IS 'Ending time';
+COMMENT ON COLUMN fee.fee_percent IS 'Decimal value(?) of fee we take';
+
+
+-- ============================================================================
 -- Ticket table
 -- Stores purchased tickets linking users to events
 -- ============================================================================
@@ -170,23 +189,6 @@ COMMENT ON COLUMN ticket.user_id IS 'User who purchased the ticket';
 COMMENT ON COLUMN ticket.event_id IS 'Event the ticket is for';
 COMMENT ON COLUMN ticket.type IS 'Type of ticket purchased';
 
--- ============================================================================
--- Fees per time table
--- Stores what fee percent we had in each time period
--- ============================================================================
-
-CREATE TABLE fee (
-    id INTEGER NOT NULL PRIMARY KEY,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP NOT NULL,
-    fee_percent float NOT NULL,
-);
-
-COMMENT ON TABLE fee IS 'Stores fee policy at different times';
-COMMENT ON COLUMN fee.id IS 'Id of time period';
-COMMENT ON COLUMN fee.start_time IS 'Starting time';
-COMMENT ON COLUMN fee.end_time IS 'Ending time';
-COMMENT ON COLUMN fee.fee_percent IS 'Decimal value(?) of fee we take';
 
 -- ============================================================================
 -- Indexes for common queries
