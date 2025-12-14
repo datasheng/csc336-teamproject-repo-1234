@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { EventDTO } from '../api/events';
 
 interface EventCardProps {
@@ -5,6 +6,8 @@ interface EventCardProps {
 }
 
 export const EventCard = ({ event }: EventCardProps) => {
+  const navigate = useNavigate();
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -23,7 +26,10 @@ export const EventCard = ({ event }: EventCardProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+    <div
+      onClick={() => navigate(`/events/${event.id}`)}
+      className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+    >
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-xl font-bold text-gray-900">{event.description}</h3>
         <span className="text-lg font-semibold text-blue-600">{getLowestPrice()}</span>
