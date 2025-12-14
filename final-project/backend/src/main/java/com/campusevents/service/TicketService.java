@@ -190,14 +190,15 @@ public class TicketService {
         // Get current fee period
         Integer feePeriodId = getCurrentFeePeriodId();
         
-        // Insert ticket
         String insertSql = "INSERT INTO ticket (user_id, event_id, type, time_period) VALUES (?, ?, ?, ?)";
         sqlExecutor.executeUpdate(insertSql, new Object[]{userId, eventId, type, feePeriodId});
-        
-        // Publish Pub/Sub message
-        pubSubService.publishTicketPurchased(eventId, userId, type);
-        
-        // Build confirmation
+
+        try {
+            pubSubService.publishTicketPurchased(eventId, userId, type);
+        } catch (Exception e) {
+            System.err.println("Warning: Failed to publish Pub/Sub message: " + e.getMessage());
+        }
+
         TicketConfirmationDTO confirmation = new TicketConfirmationDTO();
         confirmation.setEventId(eventId);
         confirmation.setUserId(userId);

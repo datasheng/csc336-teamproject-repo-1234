@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getEventById, EventDTO } from '../api/events';
+import { TicketPurchaseModal } from '../components/TicketPurchaseModal';
 
 export const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -8,6 +9,8 @@ export const EventDetails = () => {
   const [event, setEvent] = useState<EventDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -30,6 +33,17 @@ export const EventDetails = () => {
       console.error('Error fetching event:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleModalClose = (purchased?: boolean) => {
+    setIsPurchaseModalOpen(false);
+    if (purchased) {
+      setPurchaseSuccess(true);
+      setTimeout(() => setPurchaseSuccess(false), 5000);
+    }
+    if (id) {
+      fetchEvent(parseInt(id));
     }
   };
 
@@ -190,6 +204,7 @@ export const EventDetails = () => {
 
             <div className="flex gap-4">
               <button
+                onClick={() => setIsPurchaseModalOpen(true)}
                 disabled={event.availableCapacity === 0}
                 className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
                   event.availableCapacity === 0
@@ -202,6 +217,15 @@ export const EventDetails = () => {
             </div>
           </div>
         </div>
+
+        <TicketPurchaseModal
+          isOpen={isPurchaseModalOpen}
+          onClose={handleModalClose}
+          eventId={event.id}
+          eventDescription={event.description}
+          costs={event.costs}
+          availableCapacity={event.availableCapacity}
+        />
       </div>
     </div>
   );
