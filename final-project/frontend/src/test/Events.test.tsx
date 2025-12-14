@@ -6,6 +6,9 @@ import * as eventsApi from '../api/events';
 import { EventDTO } from '../api/events';
 
 vi.mock('../api/events');
+vi.mock('../hooks/useEventUpdates', () => ({
+  useEventUpdates: vi.fn(),
+}));
 
 const renderWithRouter = (component: React.ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);

@@ -27,9 +27,9 @@ describe('App', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Campus Events Platform')
   })
 
-  it('displays the Coming Soon message', () => {
+  it('displays the subtitle message', () => {
     renderApp()
-    expect(screen.getByText('Coming Soon')).toBeInTheDocument()
+    expect(screen.getByText('Discover and attend campus events')).toBeInTheDocument()
   })
 
   it('displays the description text', () => {

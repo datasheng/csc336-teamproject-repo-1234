@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getEventById, EventDTO } from '../api/events';
 import { TicketPurchaseModal } from '../components/TicketPurchaseModal';
+import { useEventUpdates } from '../hooks/useEventUpdates';
 
 export const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,14 @@ export const EventDetails = () => {
 
     fetchEvent(parseInt(id));
   }, [id]);
+
+  const handleEventUpdate = useCallback(() => {
+    if (id) {
+      fetchEvent(parseInt(id));
+    }
+  }, [id]);
+
+  useEventUpdates(id ? `/topic/event/${id}` : '', handleEventUpdate);
 
   const fetchEvent = async (eventId: number) => {
     try {
@@ -65,14 +74,6 @@ export const EventDetails = () => {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 

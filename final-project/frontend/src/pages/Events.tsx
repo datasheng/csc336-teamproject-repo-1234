@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getEvents, EventDTO, EventFilters as EventFiltersType } from '../api/events';
 import { EventCard } from '../components/EventCard';
 import { EventFilters } from '../components/EventFilters';
 import { Pagination } from '../components/Pagination';
+import { useEventUpdates } from '../hooks/useEventUpdates';
 
 const ITEMS_PER_PAGE = 9;
 
@@ -21,6 +22,12 @@ export const Events = () => {
   useEffect(() => {
     applyFilters();
   }, [events, filters]);
+
+  const handleEventUpdate = useCallback(() => {
+    fetchEvents();
+  }, []);
+
+  useEventUpdates('/topic/events', handleEventUpdate);
 
   const fetchEvents = async () => {
     try {
