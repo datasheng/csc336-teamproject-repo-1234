@@ -9,6 +9,15 @@ import { Signup } from './pages/Signup'
 import { ProfilePage } from './pages/ProfilePage'
 import { MyTicketsPage } from './pages/MyTicketsPage'
 
+// Organization Pages (Milestone 6.1)
+import OrganizationListPage from './pages/admin/organizations/OrganizationListPage'
+import CreateOrganizationPage from './pages/admin/organizations/CreateOrganizationPage'
+import OrganizationDetailsPage from './pages/admin/organizations/OrganizationDetailsPage'
+
+// Organization Pages (Milestone 6.2)
+import EditOrganizationPage from './pages/admin/organizations/EditOrganizationPage'
+import LeaderManagementPage from './pages/admin/organizations/LeaderManagementPage'
+
 function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50">
@@ -126,6 +135,33 @@ function App() {
         <Route path="/events/:id" element={<PrivateRoute><EventDetails /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
         <Route path="/my-tickets" element={<PrivateRoute><MyTicketsPage /></PrivateRoute>} />
+        
+        {/* Organization Management Routes (Milestone 6.1) */}
+        <Route path="/admin/organizations" element={<PrivateRoute><OrganizationListPage /></PrivateRoute>} />
+        <Route path="/admin/organizations/create" element={<PrivateRoute><CreateOrganizationPage /></PrivateRoute>} />
+        <Route path="/admin/organizations/:id" element={<PrivateRoute><OrganizationDetailsPage /></PrivateRoute>} />
+        
+        {/* Organization Management Routes (Milestone 6.2) */}
+        <Route path="/admin/organizations/:id/edit" element={<PrivateRoute><EditOrganizationPage /></PrivateRoute>} />
+        <Route path="/admin/organizations/:id/leaders" element={<PrivateRoute><LeaderManagementPage /></PrivateRoute>} />
+
+        {/* Placeholder routes for future milestones */}
+        <Route path="/admin/organizations/:id/create-event" element={
+          <PrivateRoute>
+            <div className="p-8 text-center">
+              <h1 className="text-2xl font-bold">Create Event</h1>
+              <p className="text-gray-600 mt-2">Coming in Milestone 6.3</p>
+            </div>
+          </PrivateRoute>
+        } />
+        <Route path="/admin/organizations/:id/events" element={
+          <PrivateRoute>
+            <div className="p-8 text-center">
+              <h1 className="text-2xl font-bold">Organization Events</h1>
+              <p className="text-gray-600 mt-2">Coming in Milestone 6.4</p>
+            </div>
+          </PrivateRoute>
+        } />
       </Routes>
     </AuthProvider>
   )
