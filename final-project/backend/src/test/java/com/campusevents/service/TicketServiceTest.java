@@ -305,6 +305,123 @@ class TicketServiceTest {
         }
     }
     
+    @Nested
+    @DisplayName("Pub/Sub Integration Tests")
+    class PubSubIntegrationTests {
+        
+        @Test
+        @DisplayName("Should publish ticket purchased message after successful purchase")
+        void shouldPublishTicketPurchasedAfterPurchase() {
+            // Arrange
+            PurchaseTicketRequest request = new PurchaseTicketRequest(1L, "VIP");
+            
+            setupSuccessfulPurchaseMocks(1L, "VIP", 100, 10, new BigDecimal("50.00"));
+            
+            // Act
+            ticketService.purchaseTicket(5L, request);
+            
+            // Assert - verify Pub/Sub was called with correct parameters
+            verify(pubSubService, times(1)).publishTicketPurchased(1L, 5L, "VIP");
+        }
+        
+        @Test
+        @DisplayName("Should not publish when purchase fails due to sold out")
+        void shouldNotPublishWhenSoldOut() {
+            PurchaseTicketRequest request = new PurchaseTicketRequest(1L, "General");
+            
+            when(sqlExecutor.exists(
+                eq("SELECT 1 FROM event WHERE id = ?"),
+                eq(new Object[]{1L})
+            )).thenReturn(true);
+            
+            Map<String, Object> capacityRow = new HashMap<>();
+            capacityRow.put("capacity", 100);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT capacity FROM event WHERE id = ?"),
+                eq(new Object[]{1L})
+            )).thenReturn(capacityRow);
+            
+            Map<String, Object> countRow = new HashMap<>();
+            countRow.put("count", 100L); // Sold out
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT COUNT(*) as count FROM ticket WHERE event_id = ?"),
+                eq(new Object[]{1L})
+            )).thenReturn(countRow);
+            
+            assertThrows(IllegalStateException.class, () -> ticketService.purchaseTicket(5L, request));
+            
+            // Verify Pub/Sub was never called
+            verify(pubSubService, never()).publishTicketPurchased(anyLong(), anyLong(), anyString());
+        }
+        
+        @Test
+        @DisplayName("Should not publish when event not found")
+        void shouldNotPublishWhenEventNotFound() {
+            PurchaseTicketRequest request = new PurchaseTicketRequest(999L, "General");
+            
+            when(sqlExecutor.exists(
+                eq("SELECT 1 FROM event WHERE id = ?"),
+                eq(new Object[]{999L})
+            )).thenReturn(false);
+            
+            assertThrows(IllegalArgumentException.class, () -> ticketService.purchaseTicket(5L, request));
+            
+            verify(pubSubService, never()).publishTicketPurchased(anyLong(), anyLong(), anyString());
+        }
+        
+        private void setupSuccessfulPurchaseMocks(Long eventId, String type, int capacity, int ticketsSold, BigDecimal cost) {
+            when(sqlExecutor.exists(
+                eq("SELECT 1 FROM event WHERE id = ?"),
+                eq(new Object[]{eventId})
+            )).thenReturn(true);
+            
+            Map<String, Object> capacityRow = new HashMap<>();
+            capacityRow.put("capacity", capacity);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT capacity FROM event WHERE id = ?"),
+                eq(new Object[]{eventId})
+            )).thenReturn(capacityRow);
+            
+            Map<String, Object> countRow = new HashMap<>();
+            countRow.put("count", (long) ticketsSold);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT COUNT(*) as count FROM ticket WHERE event_id = ?"),
+                eq(new Object[]{eventId})
+            )).thenReturn(countRow);
+            
+            Map<String, Object> costRow = new HashMap<>();
+            costRow.put("cost", cost);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT cost FROM cost WHERE event_id = ? AND type = ?"),
+                eq(new Object[]{eventId, type})
+            )).thenReturn(costRow);
+            
+            when(sqlExecutor.exists(
+                eq("SELECT 1 FROM ticket WHERE user_id = ? AND event_id = ? AND type = ?"),
+                any(Object[].class)
+            )).thenReturn(false);
+            
+            Map<String, Object> feeRow = new HashMap<>();
+            feeRow.put("id", 1);
+            when(sqlExecutor.executeQueryForMap(
+                contains("SELECT id FROM fee"),
+                any(Object[].class)
+            )).thenReturn(feeRow);
+            
+            when(sqlExecutor.executeUpdate(
+                contains("INSERT INTO ticket"),
+                any(Object[].class)
+            )).thenReturn(1);
+            
+            Map<String, Object> descRow = new HashMap<>();
+            descRow.put("description", "Test Event");
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT description FROM event WHERE id = ?"),
+                eq(new Object[]{eventId})
+            )).thenReturn(descRow);
+        }
+    }
+    
     // Helper methods
     private Map<String, Object> createTicketRow(Long eventId, String type, String description,
             LocalDateTime startTime, LocalDateTime endTime, String organizerName, BigDecimal cost) {

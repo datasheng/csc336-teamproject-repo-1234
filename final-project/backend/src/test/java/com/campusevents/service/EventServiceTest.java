@@ -616,4 +616,174 @@ class EventServiceTest {
             assertTrue(analytics.getByType().isEmpty());
         }
     }
+    
+    @Nested
+    @DisplayName("Pub/Sub Integration Tests")
+    class PubSubIntegrationTests {
+        
+        @Test
+        @DisplayName("Should publish EVENT_CREATED after creating event")
+        void shouldPublishEventCreatedAfterCreating() {
+            CreateEventRequest request = new CreateEventRequest();
+            request.setOrganizerId(1L);
+            request.setCampusId(2L);
+            request.setCapacity(100);
+            request.setDescription("Pub/Sub Test Event");
+            request.setStartTime(LocalDateTime.of(2024, 6, 1, 10, 0));
+            request.setEndTime(LocalDateTime.of(2024, 6, 1, 18, 0));
+            request.setCosts(Collections.emptyList());
+            
+            when(sqlExecutor.executeInsert(contains("INSERT INTO event"), any(Object[].class)))
+                .thenReturn(42L);
+            
+            Map<String, Object> eventRow = createEventRow(42L, 1L, 2L, 100, "Pub/Sub Test Event",
+                LocalDateTime.of(2024, 6, 1, 10, 0), LocalDateTime.of(2024, 6, 1, 18, 0),
+                "Test Org", "Test Campus");
+            when(sqlExecutor.executeQueryForMap(contains("SELECT e.id"), eq(new Object[]{42L})))
+                .thenReturn(eventRow);
+            when(sqlExecutor.executeQuery(eq("SELECT type, cost FROM cost WHERE event_id = ?"), eq(new Object[]{42L})))
+                .thenReturn(Collections.emptyList());
+            
+            Map<String, Object> ticketsRow = new HashMap<>();
+            ticketsRow.put("tickets_sold", 0L);
+            when(sqlExecutor.executeQueryForMap(eq("SELECT COUNT(*) as tickets_sold FROM ticket WHERE event_id = ?"), eq(new Object[]{42L})))
+                .thenReturn(ticketsRow);
+            
+            eventService.createEvent(request);
+            
+            verify(pubSubService, times(1)).publishEventCreated(42L, 1L, 2L);
+        }
+        
+        @Test
+        @DisplayName("Should publish EVENT_UPDATED after updating event")
+        void shouldPublishEventUpdatedAfterUpdating() {
+            UpdateEventRequest request = new UpdateEventRequest();
+            request.setDescription("Updated Event");
+            request.setCapacity(100);
+            request.setStartTime(LocalDateTime.of(2024, 6, 1, 10, 0));
+            request.setEndTime(LocalDateTime.of(2024, 6, 1, 18, 0));
+            
+            // Setup mocks for update
+            when(sqlExecutor.executeUpdate(contains("UPDATE event"), any(Object[].class)))
+                .thenReturn(1);
+            
+            Map<String, Object> eventRow = createEventRow(5L, 1L, 2L, 100, "Updated Event",
+                LocalDateTime.of(2024, 6, 1, 10, 0), LocalDateTime.of(2024, 6, 1, 18, 0),
+                "Test Org", "Test Campus");
+            when(sqlExecutor.executeQueryForMap(contains("SELECT e.id"), eq(new Object[]{5L})))
+                .thenReturn(eventRow);
+            when(sqlExecutor.executeQuery(eq("SELECT type, cost FROM cost WHERE event_id = ?"), eq(new Object[]{5L})))
+                .thenReturn(Collections.emptyList());
+            
+            Map<String, Object> ticketsRow = new HashMap<>();
+            ticketsRow.put("tickets_sold", 10L);
+            when(sqlExecutor.executeQueryForMap(eq("SELECT COUNT(*) as tickets_sold FROM ticket WHERE event_id = ?"), eq(new Object[]{5L})))
+                .thenReturn(ticketsRow);
+            
+            eventService.updateEvent(5L, request);
+            
+            verify(pubSubService, times(1)).publishEventUpdated(5L);
+        }
+        
+        @Test
+        @DisplayName("Should not publish when event not found in update")
+        void shouldNotPublishWhenEventNotFoundInUpdate() {
+            UpdateEventRequest request = new UpdateEventRequest();
+            request.setDescription("Non-existent");
+            
+            when(sqlExecutor.executeUpdate(contains("UPDATE event"), any(Object[].class)))
+                .thenReturn(0);
+            
+            RuntimeException exception = assertThrows(RuntimeException.class, 
+                () -> eventService.updateEvent(999L, request));
+            
+            verify(pubSubService, never()).publishEventUpdated(anyLong());
+        }
+    }
+    
+    @Nested
+    @DisplayName("Edge Case Tests")
+    class EdgeCaseTests {
+        
+        @Test
+        @DisplayName("Should handle null description in event")
+        void shouldHandleNullDescription() {
+            CreateEventRequest request = new CreateEventRequest();
+            request.setOrganizerId(1L);
+            request.setCampusId(2L);
+            request.setCapacity(50);
+            request.setDescription(null);
+            request.setStartTime(LocalDateTime.of(2024, 6, 1, 10, 0));
+            request.setEndTime(LocalDateTime.of(2024, 6, 1, 18, 0));
+            request.setCosts(Collections.emptyList());
+            
+            when(sqlExecutor.executeInsert(contains("INSERT INTO event"), any(Object[].class)))
+                .thenReturn(1L);
+            
+            Map<String, Object> eventRow = createEventRow(1L, 1L, 2L, 50, null,
+                LocalDateTime.of(2024, 6, 1, 10, 0), LocalDateTime.of(2024, 6, 1, 18, 0),
+                "Test Org", "Test Campus");
+            when(sqlExecutor.executeQueryForMap(contains("SELECT e.id"), eq(new Object[]{1L})))
+                .thenReturn(eventRow);
+            when(sqlExecutor.executeQuery(eq("SELECT type, cost FROM cost WHERE event_id = ?"), eq(new Object[]{1L})))
+                .thenReturn(Collections.emptyList());
+            
+            Map<String, Object> ticketsRow = new HashMap<>();
+            ticketsRow.put("tickets_sold", 0L);
+            when(sqlExecutor.executeQueryForMap(eq("SELECT COUNT(*) as tickets_sold FROM ticket WHERE event_id = ?"), eq(new Object[]{1L})))
+                .thenReturn(ticketsRow);
+            
+            EventDTO result = eventService.createEvent(request);
+            
+            assertNotNull(result);
+            assertNull(result.getDescription());
+        }
+        
+        @Test
+        @DisplayName("Should handle zero capacity event")
+        void shouldHandleZeroCapacity() {
+            Map<String, Object> eventRow = createEventRow(1L, 1L, 2L, 0, "Zero Capacity Event",
+                LocalDateTime.of(2024, 6, 1, 10, 0), LocalDateTime.of(2024, 6, 1, 18, 0),
+                "Test Org", "Test Campus");
+            when(sqlExecutor.executeQueryForMap(contains("SELECT e.id"), eq(new Object[]{1L})))
+                .thenReturn(eventRow);
+            when(sqlExecutor.executeQuery(eq("SELECT type, cost FROM cost WHERE event_id = ?"), eq(new Object[]{1L})))
+                .thenReturn(Collections.emptyList());
+            
+            Map<String, Object> ticketsRow = new HashMap<>();
+            ticketsRow.put("tickets_sold", 0L);
+            when(sqlExecutor.executeQueryForMap(eq("SELECT COUNT(*) as tickets_sold FROM ticket WHERE event_id = ?"), eq(new Object[]{1L})))
+                .thenReturn(ticketsRow);
+            
+            Optional<EventDTO> result = eventService.getEventById(1L);
+            
+            assertTrue(result.isPresent());
+            assertEquals(0, result.get().getCapacity());
+            assertEquals(0, result.get().getAvailableCapacity());
+        }
+        
+        @Test
+        @DisplayName("Should handle very large ticket count")
+        void shouldHandleLargeTicketCount() {
+            Map<String, Object> eventRow = createEventRow(1L, 1L, 2L, 10000, "Big Event",
+                LocalDateTime.of(2024, 6, 1, 10, 0), LocalDateTime.of(2024, 6, 1, 18, 0),
+                "Test Org", "Test Campus");
+            when(sqlExecutor.executeQueryForMap(contains("SELECT e.id"), eq(new Object[]{1L})))
+                .thenReturn(eventRow);
+            when(sqlExecutor.executeQuery(eq("SELECT type, cost FROM cost WHERE event_id = ?"), eq(new Object[]{1L})))
+                .thenReturn(Collections.emptyList());
+            
+            Map<String, Object> ticketsRow = new HashMap<>();
+            ticketsRow.put("tickets_sold", 9999L);
+            when(sqlExecutor.executeQueryForMap(eq("SELECT COUNT(*) as tickets_sold FROM ticket WHERE event_id = ?"), eq(new Object[]{1L})))
+                .thenReturn(ticketsRow);
+            
+            Optional<EventDTO> result = eventService.getEventById(1L);
+            
+            assertTrue(result.isPresent());
+            assertEquals(10000, result.get().getCapacity());
+            assertEquals(9999L, result.get().getTicketsSold());
+            assertEquals(1, result.get().getAvailableCapacity());
+        }
+    }
 }
