@@ -28,14 +28,14 @@ export const EventCard = ({ event }: EventCardProps) => {
   return (
     <div
       onClick={() => navigate(`/events/${event.id}`)}
-      className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+      className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-orange-600"
     >
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-xl font-bold text-gray-900">{event.description}</h3>
-        <span className="text-lg font-semibold text-blue-600">{getLowestPrice()}</span>
+        <h3 className="text-xl font-semibold text-stone-700">{event.description}</h3>
+        <span className="text-lg font-semibold text-orange-600">{getLowestPrice()}</span>
       </div>
 
-      <div className="space-y-2 text-sm text-gray-600">
+      <div className="space-y-2 text-sm text-stone-600">
         <div className="flex items-center">
           <span className="font-medium">Organizer:</span>
           <span className="ml-2">{event.organizerName}</span>
@@ -64,13 +64,13 @@ export const EventCard = ({ event }: EventCardProps) => {
         </div>
 
         <div className="mt-4">
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-stone-200 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full"
+              className="bg-orange-600 h-2 rounded-full"
               style={{ width: `${(event.ticketsSold / event.capacity) * 100}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs font-medium text-stone-500 mt-1">
             {event.availableCapacity} spots remaining
           </p>
         </div>

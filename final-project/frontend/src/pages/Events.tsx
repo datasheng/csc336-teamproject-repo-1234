@@ -71,24 +71,24 @@ export const Events = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl text-gray-600">Loading events...</div>
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-xl text-stone-600">Loading events...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="text-xl text-red-600">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Campus Events</h1>
+    <div className="min-h-screen bg-stone-50 py-8">
+      <div className="container mx-auto px-4 max-w-7xl">
+        <h1 className="text-3xl font-bold text-stone-700 mb-8">Campus Events</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
@@ -97,8 +97,8 @@ export const Events = () => {
 
           <div className="lg:col-span-3">
             {currentEvents.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                <p className="text-gray-600">No events found matching your filters.</p>
+              <div className="bg-white border border-stone-200 rounded-lg shadow-sm p-8 text-center">
+                <p className="text-stone-600">No events found matching your filters.</p>
               </div>
             ) : (
               <>

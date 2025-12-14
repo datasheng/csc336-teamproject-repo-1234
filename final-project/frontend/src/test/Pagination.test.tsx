@@ -93,6 +93,6 @@ describe('Pagination', () => {
       <Pagination currentPage={3} totalPages={5} onPageChange={mockOnPageChange} />
     );
     const currentPageButton = getByText('3');
-    expect(currentPageButton.className).toContain('bg-blue-600');
+    expect(currentPageButton.className).toContain('bg-orange-600');
   });
 });
