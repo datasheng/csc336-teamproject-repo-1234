@@ -310,7 +310,6 @@ export const TicketPurchaseModal = ({
 
             <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
               <div className="text-center mb-4">
-                <div className="text-6xl mb-2">✓</div>
                 <p className="text-green-800 font-semibold text-lg">{confirmation.message}</p>
               </div>
 
@@ -355,7 +354,6 @@ export const TicketPurchaseModal = ({
 
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
               <div className="text-center mb-4">
-                <div className="text-6xl mb-2">✗</div>
                 <p className="text-red-800 font-semibold text-lg">Unable to Complete Purchase</p>
                 <p className="text-red-600 text-sm mt-2">{error}</p>
               </div>

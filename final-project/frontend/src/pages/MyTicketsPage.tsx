@@ -70,7 +70,6 @@ export const MyTicketsPage = () => {
 
         {tickets.length === 0 ? (
           <div className="bg-white border border-stone-200 rounded-lg shadow-sm p-12 text-center">
-            <div className="text-6xl mb-4">🎫</div>
             <p className="text-xl text-stone-600 mb-2">No tickets yet</p>
             <p className="text-stone-500 mb-6">Start by browsing and purchasing tickets for upcoming events</p>
             <button

@@ -93,33 +93,50 @@ export const Events = () => {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50/20 to-stone-50 py-12">
       <div className="container mx-auto px-4 max-w-7xl">
-        <h1 className="text-3xl font-bold text-stone-700 mb-8">Campus Events</h1>
+        <div className="mb-12">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-stone-800 to-stone-600 bg-clip-text text-transparent mb-3">
+            Campus Events
+          </h1>
+          <p className="text-lg text-stone-600">
+            Discover amazing events happening across campus
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
           <div className="lg:col-span-1">
-            <EventFilters onFilterChange={handleFilterChange} />
+            <div className="sticky top-8">
+              <EventFilters onFilterChange={handleFilterChange} />
+            </div>
           </div>
 
-          <div className="lg:col-span-3">
+          <div>
             {currentEvents.length === 0 ? (
-              <div className="bg-white border border-stone-200 rounded-lg shadow-sm p-8 text-center">
-                <p className="text-stone-600">No events found matching your filters.</p>
+              <div className="bg-white border border-stone-200 rounded-2xl shadow-md p-12 text-center">
+                <div className="text-stone-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-xl font-semibold text-stone-700 mb-2">No events found</p>
+                <p className="text-stone-500">Try adjusting your filters to see more events</p>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                   {currentEvents.map(event => (
                     <EventCard key={event.id} event={event} />
                   ))}
                 </div>
 
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
+                <div className="mt-12">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
               </>
             )}
           </div>
