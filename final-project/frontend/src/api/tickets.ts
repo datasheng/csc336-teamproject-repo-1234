@@ -15,6 +15,16 @@ export interface TicketConfirmationDTO {
   message: string;
 }
 
+export interface UserTicketDTO {
+  eventId: number;
+  type: string;
+  eventDescription: string;
+  organizerName: string;
+  cost: number;
+  startTime: string;
+  endTime: string;
+}
+
 export interface ErrorResponse {
   error: string;
   message: string;
@@ -31,4 +41,9 @@ export const purchaseTicket = async (request: PurchaseTicketRequest): Promise<Ti
     }
     throw new Error('Failed to purchase ticket');
   }
+};
+
+export const getUserTickets = async (): Promise<UserTicketDTO[]> => {
+  const response = await apiClient.get<UserTicketDTO[]>('/users/me/tickets');
+  return response.data;
 };

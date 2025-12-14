@@ -1,9 +1,13 @@
 import { Routes, Route, Link } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { PrivateRoute } from './components/PrivateRoute'
+import { Navbar } from './components/Navbar'
 import { Events } from './pages/Events'
 import { EventDetails } from './pages/EventDetails'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
+import { ProfilePage } from './pages/ProfilePage'
+import { MyTicketsPage } from './pages/MyTicketsPage'
 
 function HomePage() {
   return (
@@ -52,12 +56,15 @@ function HomePage() {
 function App() {
   return (
     <AuthProvider>
+      <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/events" element={<Events />} />
-        <Route path="/events/:id" element={<EventDetails />} />
+        <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
+        <Route path="/events/:id" element={<PrivateRoute><EventDetails /></PrivateRoute>} />
+        <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+        <Route path="/my-tickets" element={<PrivateRoute><MyTicketsPage /></PrivateRoute>} />
       </Routes>
     </AuthProvider>
   )
