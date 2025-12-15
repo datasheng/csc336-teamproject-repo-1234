@@ -1,6 +1,7 @@
 package com.campusevents.dto;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,6 +16,7 @@ public class CreateEventRequest {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private List<CostDTO> costs;
+    private List<String> tags = new ArrayList<>();
     
     // Default constructor
     public CreateEventRequest() {}
@@ -74,5 +76,13 @@ public class CreateEventRequest {
     
     public void setCosts(List<CostDTO> costs) {
         this.costs = costs;
+    }
+    
+    public List<String> getTags() {
+        return tags;
+    }
+    
+    public void setTags(List<String> tags) {
+        this.tags = tags != null ? tags : new ArrayList<>();
     }
 }

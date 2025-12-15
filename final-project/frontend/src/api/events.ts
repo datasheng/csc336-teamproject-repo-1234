@@ -18,6 +18,7 @@ export interface EventDTO {
   costs: CostDTO[];
   ticketsSold: number;
   availableCapacity: number;
+  tags: string[];
 }
 
 export interface EventFilters {
@@ -28,6 +29,7 @@ export interface EventFilters {
   freeOnly?: boolean;
   minPrice?: number;
   maxPrice?: number;
+  tags?: string[];
 }
 
 export interface ErrorResponse {
@@ -68,6 +70,9 @@ export const getEvents = async (filters?: EventFilters): Promise<EventDTO[]> => 
     if (filters?.maxPrice !== undefined) {
       params.append('maxPrice', filters.maxPrice.toString());
     }
+    if (filters?.tags && filters.tags.length > 0) {
+      filters.tags.forEach(tag => params.append('tags', tag));
+    }
 
     const response = await apiClient.get<EventDTO[]>('/events', {
       params: params.toString() ? Object.fromEntries(params) : undefined,
@@ -91,6 +96,49 @@ export const getEventById = async (id: number): Promise<EventDTO> => {
       throw error.response.data as ErrorResponse;
     }
     throw new Error('Failed to fetch event');
+  }
+};
+
+export interface UpdateEventRequest {
+  capacity?: number;
+  description?: string;
+  startTime?: string;
+  endTime?: string;
+  tags?: string[];
+}
+
+export const updateEvent = async (id: number, data: UpdateEventRequest): Promise<EventDTO> => {
+  try {
+    const response = await apiClient.put<EventDTO>(`/events/${id}`, data);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw error.response.data as ErrorResponse;
+    }
+    throw new Error('Failed to update event');
+  }
+};
+
+export const deleteEvent = async (id: number): Promise<void> => {
+  try {
+    await apiClient.delete(`/events/${id}`);
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw error.response.data as ErrorResponse;
+    }
+    throw new Error('Failed to delete event');
+  }
+};
+
+export const getAllTags = async (): Promise<string[]> => {
+  try {
+    const response = await apiClient.get<string[]>('/events/tags');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw error.response.data as ErrorResponse;
+    }
+    throw new Error('Failed to fetch tags');
   }
 };
 

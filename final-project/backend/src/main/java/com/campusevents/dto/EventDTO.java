@@ -1,6 +1,7 @@
 package com.campusevents.dto;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -20,6 +21,7 @@ public class EventDTO {
     private List<CostDTO> costs;
     private Long ticketsSold;
     private Integer availableCapacity;
+    private List<String> tags = new ArrayList<>();
     
     // Default constructor
     public EventDTO() {}
@@ -119,5 +121,13 @@ public class EventDTO {
     
     public void setAvailableCapacity(Integer availableCapacity) {
         this.availableCapacity = availableCapacity;
+    }
+    
+    public List<String> getTags() {
+        return tags;
+    }
+    
+    public void setTags(List<String> tags) {
+        this.tags = tags != null ? tags : new ArrayList<>();
     }
 }

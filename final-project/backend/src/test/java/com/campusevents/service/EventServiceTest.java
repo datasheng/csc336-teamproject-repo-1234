@@ -359,7 +359,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(null, null, null, null, null, null, null);
+            List<EventDTO> result = eventService.getEvents(null, null, null, null, null, null, null, null);
             
             // Assert
             assertEquals(2, result.size());
@@ -395,7 +395,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(2L, null, null, null, null, null, null);
+            List<EventDTO> result = eventService.getEvents(2L, null, null, null, null, null, null, null);
             
             // Assert
             assertEquals(1, result.size());
@@ -430,7 +430,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(null, 3L, null, null, null, null, null);
+            List<EventDTO> result = eventService.getEvents(null, 3L, null, null, null, null, null, null);
             
             // Assert
             assertEquals(1, result.size());
@@ -468,7 +468,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(null, null, startDate, endDate, null, null, null);
+            List<EventDTO> result = eventService.getEvents(null, null, startDate, endDate, null, null, null, null);
             
             // Assert
             assertEquals(1, result.size());
@@ -482,7 +482,7 @@ class EventServiceTest {
                 any(Object[].class)
             )).thenReturn(Collections.emptyList());
             
-            List<EventDTO> result = eventService.getEvents(999L, null, null, null, null, null, null);
+            List<EventDTO> result = eventService.getEvents(999L, null, null, null, null, null, null, null);
             
             assertTrue(result.isEmpty());
         }
@@ -515,7 +515,7 @@ class EventServiceTest {
             )).thenReturn(ticketsRow);
             
             // Act
-            List<EventDTO> result = eventService.getEvents(null, null, null, null, null, null, null);
+            List<EventDTO> result = eventService.getEvents(null, null, null, null, null, null, null, null);
             
             // Assert
             assertEquals(1, result.size());
@@ -807,6 +807,85 @@ class EventServiceTest {
             assertEquals(10000, result.get().getCapacity());
             assertEquals(9999L, result.get().getTicketsSold());
             assertEquals(1, result.get().getAvailableCapacity());
+        }
+    }
+    
+    @Nested
+    @DisplayName("Tag Management Tests")
+    class TagManagementTests {
+        
+        @Test
+        @DisplayName("Should return event tags for given event ID")
+        void shouldReturnEventTags() {
+            // Arrange
+            Long eventId = 1L;
+            List<Map<String, Object>> tagRows = Arrays.asList(
+                createTagRow("Tech"),
+                createTagRow("Career"),
+                createTagRow("Networking")
+            );
+            when(sqlExecutor.executeQuery(
+                contains("SELECT t.name FROM tag t"),
+                eq(new Object[]{eventId})
+            )).thenReturn(tagRows);
+            
+            // Act
+            List<String> tags = eventService.getEventTags(eventId);
+            
+            // Assert
+            assertEquals(3, tags.size());
+            assertTrue(tags.contains("Tech"));
+            assertTrue(tags.contains("Career"));
+            assertTrue(tags.contains("Networking"));
+        }
+        
+        @Test
+        @DisplayName("Should return empty list when no tags")
+        void shouldReturnEmptyListWhenNoTags() {
+            // Arrange
+            Long eventId = 1L;
+            when(sqlExecutor.executeQuery(
+                contains("SELECT t.name FROM tag t"),
+                eq(new Object[]{eventId})
+            )).thenReturn(Collections.emptyList());
+            
+            // Act
+            List<String> tags = eventService.getEventTags(eventId);
+            
+            // Assert
+            assertTrue(tags.isEmpty());
+        }
+        
+        @Test
+        @DisplayName("Should return all available tags")
+        void shouldReturnAllTags() {
+            // Arrange
+            List<Map<String, Object>> tagRows = Arrays.asList(
+                createTagRow("Tech"),
+                createTagRow("Music"),
+                createTagRow("Sports"),
+                createTagRow("Career")
+            );
+            when(sqlExecutor.executeQuery(
+                eq("SELECT name FROM tag ORDER BY name"),
+                eq(new Object[]{})
+            )).thenReturn(tagRows);
+            
+            // Act
+            List<String> tags = eventService.getAllTags();
+            
+            // Assert
+            assertEquals(4, tags.size());
+            assertTrue(tags.contains("Tech"));
+            assertTrue(tags.contains("Music"));
+            assertTrue(tags.contains("Sports"));
+            assertTrue(tags.contains("Career"));
+        }
+        
+        private Map<String, Object> createTagRow(String name) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("name", name);
+            return row;
         }
     }
 }

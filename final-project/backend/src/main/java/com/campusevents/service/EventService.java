@@ -139,6 +139,11 @@ public class EventService {
             }
         }
         
+        // Insert tags if provided
+        if (request.getTags() != null && !request.getTags().isEmpty()) {
+            saveEventTags(eventId, request.getTags());
+        }
+        
         // Publish Pub/Sub message
         pubSubService.publishEventCreated(eventId, request.getOrganizerId(), request.getCampusId());
         
@@ -184,6 +189,9 @@ public class EventService {
         Map<String, Object> ticketsRow = sqlExecutor.executeQueryForMap(ticketsSql, new Object[]{eventId});
         Long ticketsSold = ticketsRow != null ? ((Number) ticketsRow.get("tickets_sold")).longValue() : 0L;
         
+        // Fetch tags
+        List<String> tags = getEventTags(eventId);
+        
         // Build the EventDTO
         EventDTO eventDTO = new EventDTO();
         eventDTO.setId(((Number) eventRow.get("id")).longValue());
@@ -213,6 +221,7 @@ public class EventService {
         eventDTO.setCosts(costs);
         eventDTO.setTicketsSold(ticketsSold);
         eventDTO.setAvailableCapacity(eventDTO.getCapacity() - ticketsSold.intValue());
+        eventDTO.setTags(tags);
         
         return Optional.of(eventDTO);
     }
@@ -240,6 +249,18 @@ public class EventService {
             Timestamp.valueOf(request.getEndTime()),
             eventId
         });
+        
+        // Update tags if provided
+        if (request.getTags() != null) {
+            // Delete existing tags
+            String deleteTagsSql = "DELETE FROM event_tag WHERE event_id = ?";
+            sqlExecutor.executeUpdate(deleteTagsSql, new Object[]{eventId});
+            
+            // Insert new tags
+            if (!request.getTags().isEmpty()) {
+                saveEventTags(eventId, request.getTags());
+            }
+        }
         
         // Publish Pub/Sub message with org info for org page updates
         if (organizerId != null) {
@@ -279,6 +300,10 @@ public class EventService {
         // Delete associated costs
         String deleteCostsSql = "DELETE FROM cost WHERE event_id = ?";
         sqlExecutor.executeUpdate(deleteCostsSql, new Object[]{eventId});
+        
+        // Delete associated tags
+        String deleteTagsSql = "DELETE FROM event_tag WHERE event_id = ?";
+        sqlExecutor.executeUpdate(deleteTagsSql, new Object[]{eventId});
         
         // Delete the event
         String deleteEventSql = "DELETE FROM event WHERE id = ?";
@@ -346,10 +371,11 @@ public class EventService {
      * @param freeOnly Optional filter for free events only
      * @param minPrice Optional minimum price filter
      * @param maxPrice Optional maximum price filter
+     * @param tags Optional list of tag names to filter by
      * @return List of events matching the filters
      */
     public List<EventDTO> getEvents(Long campusId, Long organizerId, LocalDate startDate, LocalDate endDate,
-                                     Boolean freeOnly, BigDecimal minPrice, BigDecimal maxPrice) {
+                                     Boolean freeOnly, BigDecimal minPrice, BigDecimal maxPrice, List<String> tags) {
         // Build dynamic SQL query
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT e.id, e.organizer_id, e.campus_id, e.capacity, e.description, ");
@@ -399,6 +425,18 @@ public class EventService {
             }
         }
         
+        // Tag filter
+        if (tags != null && !tags.isEmpty()) {
+            sql.append("AND EXISTS (SELECT 1 FROM event_tag et ");
+            sql.append("JOIN tag t ON et.tag_id = t.id ");
+            sql.append("WHERE et.event_id = e.id AND LOWER(t.name) IN (");
+            for (int i = 0; i < tags.size(); i++) {
+                sql.append(i > 0 ? ", ?" : "?");
+                params.add(tags.get(i).toLowerCase());
+            }
+            sql.append(")) ");
+        }
+        
         // Only show future events
         sql.append("AND e.start_time >= NOW() ");
         sql.append("ORDER BY e.start_time");
@@ -433,6 +471,9 @@ public class EventService {
         Map<String, Object> ticketsRow = sqlExecutor.executeQueryForMap(ticketsSql, new Object[]{eventId});
         Long ticketsSold = ticketsRow != null ? ((Number) ticketsRow.get("tickets_sold")).longValue() : 0L;
         
+        // Fetch tags
+        List<String> tags = getEventTags(eventId);
+        
         // Build the EventDTO
         EventDTO eventDTO = new EventDTO();
         eventDTO.setId(eventId);
@@ -462,6 +503,7 @@ public class EventService {
         eventDTO.setCosts(costs);
         eventDTO.setTicketsSold(ticketsSold);
         eventDTO.setAvailableCapacity(eventDTO.getCapacity() - ticketsSold.intValue());
+        eventDTO.setTags(tags);
         
         return eventDTO;
     }
@@ -502,5 +544,78 @@ public class EventService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         return new EventAnalyticsDTO(eventId, totalTickets, totalRevenue, byType);
+    }
+    
+    /**
+     * Get all tags for an event.
+     * 
+     * @param eventId The event ID
+     * @return List of tag names
+     */
+    public List<String> getEventTags(Long eventId) {
+        String sql = "SELECT t.name FROM tag t " +
+                     "JOIN event_tag et ON t.id = et.tag_id " +
+                     "WHERE et.event_id = ? ORDER BY t.name";
+        List<Map<String, Object>> rows = sqlExecutor.executeQuery(sql, new Object[]{eventId});
+        return rows.stream()
+            .map(row -> (String) row.get("name"))
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Save tags for an event.
+     * Creates new tags if they don't exist.
+     * 
+     * @param eventId The event ID
+     * @param tagNames List of tag names
+     */
+    private void saveEventTags(Long eventId, List<String> tagNames) {
+        for (String tagName : tagNames) {
+            if (tagName == null || tagName.trim().isEmpty()) {
+                continue;
+            }
+            
+            String trimmedName = tagName.trim();
+            
+            // Check if tag exists, if not create it
+            String findTagSql = "SELECT id FROM tag WHERE LOWER(name) = LOWER(?)";
+            Map<String, Object> existingTag = sqlExecutor.executeQueryForMap(findTagSql, new Object[]{trimmedName});
+            
+            Long tagId;
+            if (existingTag != null) {
+                tagId = ((Number) existingTag.get("id")).longValue();
+            } else {
+                // Create new tag
+                tagId = sqlExecutor.executeInsert("INSERT INTO tag (name) VALUES (?)", new Object[]{trimmedName});
+            }
+            
+            // Link tag to event (ignore if already exists)
+            String linkSql = "INSERT INTO event_tag (event_id, tag_id) VALUES (?, ?) " +
+                            "ON CONFLICT (event_id, tag_id) DO NOTHING";
+            try {
+                sqlExecutor.executeUpdate(linkSql, new Object[]{eventId, tagId});
+            } catch (Exception e) {
+                // In case DB doesn't support ON CONFLICT, try simple insert and ignore duplicate
+                try {
+                    String simpleLinkSql = "INSERT INTO event_tag (event_id, tag_id) VALUES (?, ?)";
+                    sqlExecutor.executeUpdate(simpleLinkSql, new Object[]{eventId, tagId});
+                } catch (Exception ignored) {
+                    // Already exists, ignore
+                }
+            }
+        }
+    }
+    
+    /**
+     * Get all available tags.
+     * 
+     * @return List of all tag names
+     */
+    public List<String> getAllTags() {
+        String sql = "SELECT name FROM tag ORDER BY name";
+        List<Map<String, Object>> rows = sqlExecutor.executeQuery(sql, new Object[]{});
+        return rows.stream()
+            .map(row -> (String) row.get("name"))
+            .collect(Collectors.toList());
     }
 }

@@ -9,6 +9,8 @@
 -- ============================================================================
 
 -- Drop existing tables if they exist (in reverse dependency order)
+DROP TABLE IF EXISTS event_tag CASCADE;
+DROP TABLE IF EXISTS tag CASCADE;
 DROP TABLE IF EXISTS ticket CASCADE;
 DROP TABLE IF EXISTS cost CASCADE;
 DROP TABLE IF EXISTS event CASCADE;
@@ -189,6 +191,35 @@ COMMENT ON COLUMN ticket.user_id IS 'User who purchased the ticket';
 COMMENT ON COLUMN ticket.event_id IS 'Event the ticket is for';
 COMMENT ON COLUMN ticket.type IS 'Type of ticket purchased';
 
+-- ============================================================================
+-- Tag table
+-- Stores available event tags for categorization
+-- ============================================================================
+CREATE TABLE tag (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+COMMENT ON TABLE tag IS 'Stores available event tags for categorization';
+COMMENT ON COLUMN tag.id IS 'Auto-generated unique identifier';
+COMMENT ON COLUMN tag.name IS 'Tag name (e.g., Tech, Entertainment, Sports)';
+
+-- ============================================================================
+-- Event-Tag junction table
+-- Many-to-many relationship between events and tags
+-- ============================================================================
+CREATE TABLE event_tag (
+    event_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (event_id, tag_id),
+    FOREIGN KEY (event_id) REFERENCES event(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE event_tag IS 'Links events to their tags';
+COMMENT ON COLUMN event_tag.event_id IS 'Reference to event table';
+COMMENT ON COLUMN event_tag.tag_id IS 'Reference to tag table';
+
 
 -- ============================================================================
 -- Indexes for common queries
@@ -215,6 +246,10 @@ CREATE INDEX idx_ticket_event ON ticket(event_id);
 -- Organization leadership queries
 CREATE INDEX idx_org_leadership_user ON org_leadership(user_id);
 CREATE INDEX idx_org_leadership_org ON org_leadership(org_id);
+
+-- Event tag queries
+CREATE INDEX idx_event_tag_event ON event_tag(event_id);
+CREATE INDEX idx_event_tag_tag ON event_tag(tag_id);
 
 -- ============================================================================
 -- Sample seed data
@@ -303,6 +338,29 @@ INSERT INTO organization (name, description) VALUES
     ('Volunteer & Community Service', 'Making a positive impact in local communities'),
     ('International Students Association', 'Supporting international students and cultural exchange'),
     ('Engineering Society', 'Connecting engineering students across disciplines');
+
+-- Insert sample tags
+INSERT INTO tag (name) VALUES
+    ('Tech'),
+    ('Entertainment'),
+    ('Sports'),
+    ('Academic'),
+    ('Career'),
+    ('Networking'),
+    ('Music'),
+    ('Art'),
+    ('Culture'),
+    ('Food'),
+    ('Workshop'),
+    ('Competition'),
+    ('Social'),
+    ('Gaming'),
+    ('Health'),
+    ('Sustainability'),
+    ('Film'),
+    ('Community Service'),
+    ('Business'),
+    ('Science');
 
 -- Insert fee periods
 INSERT INTO fee (id, start_time, end_time, fee_percent) VALUES
@@ -496,6 +554,77 @@ INSERT INTO cost (type, event_id, cost) VALUES
     ('Day Pass', 33, 15.00),
     ('Student', 33, 8.00),
     ('VIP', 33, 35.00);
+
+-- Insert event tags (linking events to tags)
+-- Tag IDs: 1=Tech, 2=Entertainment, 3=Sports, 4=Academic, 5=Career, 6=Networking, 7=Music, 8=Art, 9=Culture, 10=Food
+-- Tag IDs: 11=Workshop, 12=Competition, 13=Social, 14=Gaming, 15=Health, 16=Sustainability, 17=Film, 18=Community Service, 19=Business, 20=Science
+INSERT INTO event_tag (event_id, tag_id) VALUES
+    -- Harvard CS Hackathon (Tech, Competition)
+    (1, 1), (1, 12),
+    -- Winter Jazz Concert (Music, Entertainment)
+    (2, 7), (2, 2),
+    -- Spring Career Fair (Career, Networking)
+    (3, 5), (3, 6),
+    -- Startup Pitch Night (Business, Networking, Tech)
+    (4, 19), (4, 6), (4, 1),
+    -- AI/ML Workshop (Tech, Workshop, Academic)
+    (5, 1), (5, 11), (5, 4),
+    -- Basketball Watch Party (Sports, Social, Entertainment)
+    (6, 3), (6, 13), (6, 2),
+    -- International Food Festival (Food, Culture, Social)
+    (7, 10), (7, 9), (7, 13),
+    -- Yale Debate Championship (Academic, Competition)
+    (8, 4), (8, 12),
+    -- Earth Day Festival (Sustainability, Community Service)
+    (9, 16), (9, 18),
+    -- Berkeley Engineering Expo (Tech, Academic, Career)
+    (10, 1), (10, 4), (10, 5),
+    -- Wall Street 101 (Career, Business, Academic)
+    (11, 5), (11, 19), (11, 4),
+    -- Baruch Startup Weekend (Business, Tech, Competition)
+    (12, 19), (12, 1), (12, 12),
+    -- Pre-Med Information Session (Health, Academic, Career)
+    (13, 15), (13, 4), (13, 5),
+    -- Hunter Community Service Day (Community Service, Social)
+    (14, 18), (14, 13),
+    -- Columbia Tech Summit (Tech, Career, Networking)
+    (15, 1), (15, 5), (15, 6),
+    -- Spring Musical (Entertainment, Music, Art)
+    (16, 2), (16, 7), (16, 8),
+    -- NYU Film Festival (Film, Art, Entertainment)
+    (17, 17), (17, 8), (17, 2),
+    -- Lunar New Year Celebration (Culture, Food, Social)
+    (18, 9), (18, 10), (18, 13),
+    -- NYU Esports Tournament (Gaming, Competition, Entertainment)
+    (19, 14), (19, 12), (19, 2),
+    -- MIT Robot Competition (Tech, Competition, Science)
+    (20, 1), (20, 12), (20, 20),
+    -- HackMIT (Tech, Competition)
+    (21, 1), (21, 12),
+    -- UCLA Spring Sports Festival (Sports, Social)
+    (22, 3), (22, 13),
+    -- Bruin Cultural Night (Culture, Entertainment, Social)
+    (23, 9), (23, 2), (23, 13),
+    -- Economics Research Symposium (Academic, Business)
+    (24, 4), (24, 19),
+    -- Chicago Debate Open (Academic, Competition)
+    (25, 4), (25, 12),
+    -- Cornell Engineering Career Fair (Career, Tech, Networking)
+    (26, 5), (26, 1), (26, 6),
+    -- Sustainability Conference (Sustainability, Academic)
+    (27, 16), (27, 4),
+    -- HackGT (Tech, Competition)
+    (28, 1), (28, 12),
+    -- Atlanta Startup Panel (Business, Networking, Career)
+    (29, 19), (29, 6), (29, 5),
+    -- BU Symphony Concert (Music, Entertainment, Art)
+    (30, 7), (30, 2), (30, 8),
+    -- International Coffee Hour (Culture, Social, Networking)
+    (31, 9), (31, 13), (31, 6),
+    -- Co-op Workshop (Career, Workshop)
+    (32, 5), (32, 11),
+    -- Gaming Convention (Gaming, Entertainment, Social)
+    (33, 14), (33, 2), (33, 13);
 
 -- Note: In production, you would NOT include sample users with plain text passwords
 -- The password below is 'password123' hashed with BCrypt

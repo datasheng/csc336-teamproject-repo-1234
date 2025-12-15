@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { EventFilters as EventFiltersType } from '../api/events';
+import { EventFilters as EventFiltersType, getAllTags } from '../api/events';
 import { getAllCampuses, CampusDTO } from '../api/campuses';
 
 interface EventFiltersProps {
@@ -15,9 +15,14 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [campuses, setCampuses] = useState<CampusDTO[]>([]);
   const [loadingCampuses, setLoadingCampuses] = useState(true);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [loadingTags, setLoadingTags] = useState(true);
+  const [tagsOpen, setTagsOpen] = useState(false);
 
   useEffect(() => {
     fetchCampuses();
+    fetchTags();
   }, []);
 
   const fetchCampuses = async () => {
@@ -30,6 +35,26 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
     } finally {
       setLoadingCampuses(false);
     }
+  };
+
+  const fetchTags = async () => {
+    try {
+      setLoadingTags(true);
+      const data = await getAllTags();
+      setAvailableTags(data);
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+    } finally {
+      setLoadingTags(false);
+    }
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
   };
 
   const handleApplyFilters = () => {
@@ -53,6 +78,9 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
     if (maxPrice && !freeOnly) {
       filters.maxPrice = parseFloat(maxPrice);
     }
+    if (selectedTags.length > 0) {
+      filters.tags = selectedTags;
+    }
 
     onFilterChange(filters);
   };
@@ -64,6 +92,7 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
     setFreeOnly(false);
     setMinPrice('');
     setMaxPrice('');
+    setSelectedTags([]);
     onFilterChange({});
   };
 
@@ -189,6 +218,59 @@ export const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
                   className="w-full px-4 py-2.5 border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white text-sm font-medium"
                 />
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tags Filter */}
+        <div className="border-b border-stone-200 pb-4">
+          <button
+            onClick={() => setTagsOpen(!tagsOpen)}
+            className="w-full flex items-center justify-between text-left group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg group-hover:from-orange-200 group-hover:to-orange-100 transition-all">
+                <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              </div>
+              <div>
+                <span className="font-semibold text-stone-800">Tags</span>
+                {selectedTags.length > 0 && (
+                  <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{selectedTags.length} selected</span>
+                )}
+              </div>
+            </div>
+            <svg
+              className={`w-5 h-5 text-stone-400 transition-transform duration-300 ${tagsOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {tagsOpen && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {loadingTags ? (
+                <p className="text-sm text-stone-500">Loading tags...</p>
+              ) : availableTags.length === 0 ? (
+                <p className="text-sm text-stone-500">No tags available</p>
+              ) : (
+                availableTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      selectedTags.includes(tag)
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-stone-100 text-stone-700 hover:bg-orange-100 hover:text-orange-700'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>

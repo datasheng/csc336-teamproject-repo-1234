@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { organizationsApi, Organization } from '../../../api/organizations';
 import { getAllCampuses, CampusDTO } from '../../../api/campuses';
-import apiClient from '../../../api/events';
+import apiClient, { getAllTags } from '../../../api/events';
+import { generateEventFromDescription } from '../../../api/ai';
 
 interface CostEntry {
   type: string;
@@ -17,6 +18,7 @@ interface CreateEventRequest {
   startTime: string;
   endTime: string;
   costs: CostEntry[];
+  tags?: string[];
 }
 
 export default function CreateEventPage() {
@@ -38,6 +40,13 @@ export default function CreateEventPage() {
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('');
   const [costs, setCosts] = useState<CostEntry[]>([{ type: 'General', cost: 0 }]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  // AI generation state
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -46,16 +55,57 @@ export default function CreateEventPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [org, campusData] = await Promise.all([
+      const [org, campusData, tagsData] = await Promise.all([
         organizationsApi.getOrganization(organizationId!),
-        getAllCampuses()
+        getAllCampuses(),
+        getAllTags()
       ]);
       setOrganization(org);
       setCampuses(campusData);
+      setAvailableTags(tagsData);
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) {
+      setAiError('Please enter a description for the event you want to create');
+      return;
+    }
+
+    setAiGenerating(true);
+    setAiError(null);
+
+    try {
+      const generated = await generateEventFromDescription(aiPrompt, availableTags);
+      
+      // Fill in the form fields with generated data
+      setDescription(generated.description);
+      setCapacity(generated.capacity.toString());
+      setStartDate(generated.startDate);
+      setStartTime(generated.startTime);
+      setEndDate(generated.endDate);
+      setEndTime(generated.endTime);
+      setCosts(generated.costs);
+      setSelectedTags(generated.tags);
+      
+      // Clear the AI prompt after successful generation
+      setAiPrompt('');
+    } catch (err: any) {
+      setAiError(err.message || 'Failed to generate event details');
+    } finally {
+      setAiGenerating(false);
     }
   };
 
@@ -114,7 +164,8 @@ export default function CreateEventPage() {
         description: description.trim(),
         startTime: `${startDate}T${startTime}:00`,
         endTime: `${endDate}T${endTime}:00`,
-        costs: costs.filter(c => c.type.trim())
+        costs: costs.filter(c => c.type.trim()),
+        tags: selectedTags.length > 0 ? selectedTags : undefined
       };
 
       await apiClient.post('/events', request);
@@ -156,6 +207,59 @@ export default function CreateEventPage() {
       <div className="bg-white border border-stone-200 rounded-lg p-6">
         <h1 className="text-2xl font-bold text-stone-900 mb-2">Create New Event</h1>
         <p className="text-stone-600 mb-6">Hosting as <strong>{organization.name}</strong></p>
+
+        {/* AI Event Generator */}
+        <div className="mb-8 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-purple-900">AI Event Generator</h2>
+            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Beta</span>
+          </div>
+          <p className="text-sm text-purple-700 mb-3">
+            Describe your event idea and let AI fill in the details for you.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !aiGenerating && handleAiGenerate()}
+              placeholder="e.g., A networking mixer for CS students with free pizza"
+              className="flex-1 px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white"
+              disabled={aiGenerating}
+            />
+            <button
+              type="button"
+              onClick={handleAiGenerate}
+              disabled={aiGenerating || !aiPrompt.trim()}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 min-w-[120px] justify-center"
+            >
+              {aiGenerating ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  <span>Generate</span>
+                </>
+              )}
+            </button>
+          </div>
+          {aiError && (
+            <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">
+              {aiError}
+            </div>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Event Description */}
@@ -319,6 +423,37 @@ export default function CreateEventPage() {
             <p className="text-xs text-stone-500 mt-1">
               Set price to $0 for free tickets
             </p>
+          </div>
+
+          {/* Event Tags */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-2">
+              Event Tags
+            </label>
+            <p className="text-xs text-stone-500 mb-3">
+              Select tags to help attendees find your event
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    selectedTags.includes(tag)
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-stone-100 text-stone-700 hover:bg-orange-100 hover:text-orange-700'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+            {selectedTags.length > 0 && (
+              <p className="text-xs text-stone-600 mt-2">
+                Selected: {selectedTags.join(', ')}
+              </p>
+            )}
           </div>
 
           {error && (

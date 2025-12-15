@@ -96,6 +96,27 @@ export const EventCard = ({ event }: EventCardProps) => {
           </div>
         </div>
 
+        {/* Tags */}
+        {event.tags && event.tags.length > 0 && (
+          <div className="pt-4 border-t border-stone-100">
+            <div className="flex flex-wrap gap-1.5">
+              {event.tags.slice(0, 4).map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-2.5 py-1 bg-orange-50 text-orange-700 text-xs font-semibold rounded-full border border-orange-200"
+                >
+                  {tag}
+                </span>
+              ))}
+              {event.tags.length > 4 && (
+                <span className="px-2.5 py-1 bg-stone-100 text-stone-600 text-xs font-semibold rounded-full">
+                  +{event.tags.length - 4} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="pt-5 border-t-2 border-stone-100">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-stone-500 uppercase tracking-widest">Availability</span>

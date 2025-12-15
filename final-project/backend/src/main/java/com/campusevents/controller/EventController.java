@@ -50,6 +50,7 @@ public class EventController {
      * - freeOnly: Filter to only show free events (boolean)
      * - minPrice: Filter events with at least one ticket type at or above this price
      * - maxPrice: Filter events with at least one ticket type at or below this price
+     * - tags: Filter events that have at least one of the specified tags (comma-separated)
      * 
      * @param campusId Optional campus filter
      * @param organizerId Optional organizer filter
@@ -58,6 +59,7 @@ public class EventController {
      * @param freeOnly Optional filter for free events only
      * @param minPrice Optional minimum price filter
      * @param maxPrice Optional maximum price filter
+     * @param tags Optional list of tags to filter by
      * @return List of future events matching the filters
      */
     @GetMapping
@@ -68,13 +70,31 @@ public class EventController {
             @RequestParam(required = false) LocalDate endDate,
             @RequestParam(required = false) Boolean freeOnly,
             @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice) {
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) List<String> tags) {
         try {
-            List<EventDTO> events = eventService.getEvents(campusId, organizerId, startDate, endDate, freeOnly, minPrice, maxPrice);
+            List<EventDTO> events = eventService.getEvents(campusId, organizerId, startDate, endDate, freeOnly, minPrice, maxPrice, tags);
             return ResponseEntity.ok(events);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ErrorResponse("Internal Server Error", "An error occurred while fetching events", 500)
+            );
+        }
+    }
+    
+    /**
+     * Get all available tags.
+     * 
+     * @return List of all tag names
+     */
+    @GetMapping("/tags")
+    public ResponseEntity<?> getAllTags() {
+        try {
+            List<String> tags = eventService.getAllTags();
+            return ResponseEntity.ok(tags);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new ErrorResponse("Internal Server Error", "An error occurred while fetching tags", 500)
             );
         }
     }
