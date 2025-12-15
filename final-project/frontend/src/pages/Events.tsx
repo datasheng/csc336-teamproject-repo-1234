@@ -169,7 +169,7 @@ export const Events = () => {
       <div className="container mx-auto px-4 max-w-7xl">
         <div className="mb-12">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-stone-800 to-stone-600 bg-clip-text text-transparent mb-3">
-            Campus Events
+            CampusTix
           </h1>
           <p className="text-lg text-stone-600">
             Discover amazing events happening across campus

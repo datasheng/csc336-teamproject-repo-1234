@@ -184,7 +184,11 @@ export default function OrganizationDetailsPage() {
           onClick={() => navigate(`/admin/organizations/${id}/edit`)}
           className="bg-white border border-stone-200 rounded-lg p-4 hover:shadow-md hover:border-orange-300 transition-all text-left"
         >
-          <div className="text-2xl mb-2">✏️</div>
+          <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
+            <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </div>
           <h3 className="font-semibold text-stone-900">Edit Organization</h3>
           <p className="text-sm text-stone-600">Update name and description</p>
         </button>
@@ -193,7 +197,11 @@ export default function OrganizationDetailsPage() {
           onClick={() => navigate(`/admin/organizations/${id}/leaders`)}
           className="bg-white border border-stone-200 rounded-lg p-4 hover:shadow-md hover:border-orange-300 transition-all text-left"
         >
-          <div className="text-2xl mb-2">👥</div>
+          <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
+            <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
           <h3 className="font-semibold text-stone-900">Manage Leaders</h3>
           <p className="text-sm text-stone-600">Invite or remove leaders</p>
         </button>
@@ -202,7 +210,11 @@ export default function OrganizationDetailsPage() {
           onClick={() => navigate(`/admin/organizations/${id}/create-event`)}
           className="bg-orange-600 text-white rounded-lg p-4 hover:bg-orange-700 transition-all text-left"
         >
-          <div className="text-2xl mb-2">📅</div>
+          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mb-3">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
           <h3 className="font-semibold">Create Event</h3>
           <p className="text-sm opacity-90">Host a new event</p>
         </button>
@@ -225,7 +237,11 @@ export default function OrganizationDetailsPage() {
           </div>
         ) : events.length === 0 ? (
           <div className="bg-white border border-stone-200 rounded-lg p-8 text-center">
-            <div className="text-4xl mb-2">📅</div>
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
             <p className="text-stone-600">No events yet.</p>
             <button
               onClick={() => navigate(`/admin/organizations/${id}/create-event`)}

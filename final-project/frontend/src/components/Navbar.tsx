@@ -28,7 +28,7 @@ export const Navbar = () => {
                 </svg>
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">
-                Campus Events
+                CampusTix
               </span>
             </Link>
 
@@ -64,7 +64,7 @@ export const Navbar = () => {
                 </svg>
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">
-                Campus Events
+                CampusTix
               </span>
             </Link>
             <div className="flex gap-2">

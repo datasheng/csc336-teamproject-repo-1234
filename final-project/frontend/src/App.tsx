@@ -64,7 +64,7 @@ function HomePage() {
               </span>
             </div>
             <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-stone-800 to-stone-600 bg-clip-text text-transparent">
-              Campus Events Platform
+              CampusTix
             </h1>
             <p className="text-2xl text-stone-600 mb-8 max-w-2xl mx-auto">
               Discover, organize, and attend amazing campus events
@@ -165,11 +165,11 @@ function HomePage() {
         <div className="text-center mb-16 animate-fade-in">
           <div className="inline-block mb-6">
             <span className="bg-gradient-to-r from-orange-600 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-md">
-              Welcome to Campus Events
+              Welcome to CampusTix
             </span>
           </div>
           <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-stone-800 to-stone-600 bg-clip-text text-transparent">
-            Campus Events Platform
+            CampusTix
           </h1>
           <p className="text-2xl text-stone-600 mb-8 max-w-2xl mx-auto">
             Discover, organize, and attend amazing campus events
