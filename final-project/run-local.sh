@@ -17,6 +17,49 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+RESET_DB=false
+for arg in "$@"; do
+    if [ "$arg" == "--reset" ]; then
+        RESET_DB=true
+    fi
+done
+
+jdbc_to_psql() {
+    # Example JDBC: jdbc:postgresql://host/dbname?sslmode=require&channel_binding=require
+    local jdbc_url="$1"
+    local user="$2"
+    local pass="$3"
+
+    # Remove 'jdbc:'
+    local tmp=${jdbc_url#jdbc:}
+
+    # Insert username and password
+    local host_db=${tmp#*://}       # host/dbname?params
+    local psql_url="postgresql://${user}:${pass}@${host_db}"
+
+    echo "$psql_url"
+}
+
+reset_database() {
+    echo -e "\n${BLUE}Resetting database...${NC}"
+
+    if ! command -v psql &> /dev/null; then
+        echo -e "${RED}Error: psql (PostgreSQL CLI) is not installed.${NC}"
+        exit 1
+    fi
+
+    # Convert JDBC URL to psql URL
+    PSQL_URL=$(jdbc_to_psql "$DB_URL" "$DB_USERNAME" "$DB_PASSWORD")
+
+    # Step 1: Create the procedure if it doesn't exist
+    echo -e "${BLUE}Creating reset_database procedure if needed...${NC}"
+    psql "$PSQL_URL" -f infra/db/procedures.sql
+
+    # Step 2: Call the procedure
+    psql "$PSQL_URL" -c "CALL reset_database();" && \
+    echo -e "${GREEN}Database reset complete${NC}"
+}
+
 echo -e "${BLUE}=========================================${NC}"
 echo -e "${BLUE}  Campus Events Platform - Local Dev    ${NC}"
 echo -e "${BLUE}=========================================${NC}"
@@ -150,6 +193,10 @@ fi
 echo -e "\n${BLUE}=========================================${NC}"
 echo -e "${GREEN}Starting services...${NC}"
 echo -e "${BLUE}=========================================${NC}"
+
+if [ "$RESET_DB" = true ]; then
+    reset_database
+fi
 
 # Start backend
 echo -e "\n${BLUE}Starting backend on http://localhost:8080${NC}"
