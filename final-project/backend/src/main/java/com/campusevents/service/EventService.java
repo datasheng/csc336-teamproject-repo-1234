@@ -226,6 +226,10 @@ public class EventService {
      */
     @Transactional
     public EventDTO updateEvent(Long eventId, UpdateEventRequest request) {
+        // Get organizer ID for real-time updates
+        Optional<Long> organizerIdOpt = getEventOrganizerId(eventId);
+        Long organizerId = organizerIdOpt.orElse(null);
+        
         String updateSql = "UPDATE event SET capacity = ?, description = ?, start_time = ?, end_time = ? " +
                            "WHERE id = ?";
         
@@ -237,12 +241,99 @@ public class EventService {
             eventId
         });
         
-        // Publish Pub/Sub message
-        pubSubService.publishEventUpdated(eventId);
+        // Publish Pub/Sub message with org info for org page updates
+        if (organizerId != null) {
+            pubSubService.publishEventUpdatedWithOrg(eventId, organizerId);
+        } else {
+            pubSubService.publishEventUpdated(eventId);
+        }
         
         // Fetch and return the updated event
         return getEventById(eventId).orElseThrow(() -> 
             new RuntimeException("Failed to retrieve updated event"));
+    }
+    
+    /**
+     * Delete an event.
+     * Also deletes associated tickets and costs.
+     * 
+     * @param eventId The event ID to delete
+     * @return true if deleted successfully
+     */
+    @Transactional
+    public boolean deleteEvent(Long eventId) {
+        // Get event info before deletion for real-time updates
+        Optional<Long> organizerIdOpt = getEventOrganizerId(eventId);
+        Long campusId = getEventCampusId(eventId);
+        
+        if (organizerIdOpt.isEmpty()) {
+            return false;
+        }
+        
+        Long organizerId = organizerIdOpt.get();
+        
+        // Delete associated tickets first (foreign key constraint)
+        String deleteTicketsSql = "DELETE FROM ticket WHERE event_id = ?";
+        sqlExecutor.executeUpdate(deleteTicketsSql, new Object[]{eventId});
+        
+        // Delete associated costs
+        String deleteCostsSql = "DELETE FROM cost WHERE event_id = ?";
+        sqlExecutor.executeUpdate(deleteCostsSql, new Object[]{eventId});
+        
+        // Delete the event
+        String deleteEventSql = "DELETE FROM event WHERE id = ?";
+        int rowsAffected = sqlExecutor.executeUpdate(deleteEventSql, new Object[]{eventId});
+        
+        if (rowsAffected > 0) {
+            // Publish real-time update
+            pubSubService.publishEventDeletedWithOrg(eventId, organizerId, campusId);
+        }
+        
+        return rowsAffected > 0;
+    }
+    
+    /**
+     * Cancel an event (marks it as cancelled but doesn't delete).
+     * 
+     * @param eventId The event ID to cancel
+     * @return The updated event DTO
+     */
+    @Transactional
+    public EventDTO cancelEvent(Long eventId) {
+        // Get event info for real-time updates
+        Optional<Long> organizerIdOpt = getEventOrganizerId(eventId);
+        Long campusId = getEventCampusId(eventId);
+        
+        if (organizerIdOpt.isEmpty()) {
+            throw new IllegalArgumentException("Event not found");
+        }
+        
+        Long organizerId = organizerIdOpt.get();
+        
+        // Update event description to indicate cancelled
+        String updateSql = "UPDATE event SET description = CONCAT('[CANCELLED] ', description) WHERE id = ? AND description NOT LIKE '[CANCELLED]%'";
+        sqlExecutor.executeUpdate(updateSql, new Object[]{eventId});
+        
+        // Publish real-time update
+        pubSubService.publishEventCancelledWithOrg(eventId, organizerId, campusId);
+        
+        return getEventById(eventId).orElseThrow(() -> 
+            new RuntimeException("Failed to retrieve cancelled event"));
+    }
+    
+    /**
+     * Get the campus ID for an event.
+     * 
+     * @param eventId The event ID
+     * @return The campus ID, or null if not found
+     */
+    public Long getEventCampusId(Long eventId) {
+        String sql = "SELECT campus_id FROM event WHERE id = ?";
+        Map<String, Object> result = sqlExecutor.executeQueryForMap(sql, new Object[]{eventId});
+        if (result == null) {
+            return null;
+        }
+        return ((Number) result.get("campus_id")).longValue();
     }
     
     /**

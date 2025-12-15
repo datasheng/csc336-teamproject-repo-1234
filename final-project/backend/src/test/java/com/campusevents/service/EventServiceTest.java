@@ -277,6 +277,14 @@ class EventServiceTest {
             request.setStartTime(LocalDateTime.of(2024, 3, 20, 10, 0));
             request.setEndTime(LocalDateTime.of(2024, 3, 20, 18, 0));
             
+            // Mock organizer_id query for real-time updates
+            Map<String, Object> organizerRow = new HashMap<>();
+            organizerRow.put("organizer_id", 1L);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT organizer_id FROM event WHERE id = ?"),
+                eq(new Object[]{5L})
+            )).thenReturn(organizerRow);
+            
             when(sqlExecutor.executeUpdate(
                 contains("UPDATE event SET"),
                 any(Object[].class)
@@ -310,8 +318,8 @@ class EventServiceTest {
             assertEquals(150, result.getCapacity());
             assertEquals("Updated Description", result.getDescription());
             
-            // Verify Pub/Sub message was published
-            verify(pubSubService).publishEventUpdated(5L);
+            // Verify Pub/Sub message was published with org info
+            verify(pubSubService).publishEventUpdatedWithOrg(5L, 1L);
         }
     }
     
@@ -663,6 +671,14 @@ class EventServiceTest {
             request.setStartTime(LocalDateTime.of(2024, 6, 1, 10, 0));
             request.setEndTime(LocalDateTime.of(2024, 6, 1, 18, 0));
             
+            // Mock organizer_id query for real-time updates
+            Map<String, Object> organizerRow = new HashMap<>();
+            organizerRow.put("organizer_id", 1L);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT organizer_id FROM event WHERE id = ?"),
+                eq(new Object[]{5L})
+            )).thenReturn(organizerRow);
+            
             // Setup mocks for update
             when(sqlExecutor.executeUpdate(contains("UPDATE event"), any(Object[].class)))
                 .thenReturn(1);
@@ -682,7 +698,7 @@ class EventServiceTest {
             
             eventService.updateEvent(5L, request);
             
-            verify(pubSubService, times(1)).publishEventUpdated(5L);
+            verify(pubSubService, times(1)).publishEventUpdatedWithOrg(5L, 1L);
         }
         
         @Test
@@ -691,6 +707,12 @@ class EventServiceTest {
             UpdateEventRequest request = new UpdateEventRequest();
             request.setDescription("Non-existent");
             
+            // Mock organizer_id query to return null (event not found)
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT organizer_id FROM event WHERE id = ?"),
+                eq(new Object[]{999L})
+            )).thenReturn(null);
+            
             when(sqlExecutor.executeUpdate(contains("UPDATE event"), any(Object[].class)))
                 .thenReturn(0);
             
@@ -698,6 +720,7 @@ class EventServiceTest {
                 () -> eventService.updateEvent(999L, request));
             
             verify(pubSubService, never()).publishEventUpdated(anyLong());
+            verify(pubSubService, never()).publishEventUpdatedWithOrg(anyLong(), anyLong());
         }
     }
     

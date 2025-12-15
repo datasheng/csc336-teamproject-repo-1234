@@ -6,6 +6,11 @@ import * as ticketsApi from '../api/tickets';
 
 vi.mock('../api/tickets');
 
+// Mock the useTicketUpdates hook that was added for real-time updates
+vi.mock('../hooks/useTicketUpdates', () => ({
+  useTicketUpdates: vi.fn(),
+}));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -127,10 +132,12 @@ describe('MyTicketsPage', () => {
 
   it('should display paid ticket correctly', async () => {
     vi.spyOn(ticketsApi, 'getUserTickets').mockResolvedValue(mockTickets);
-    const { getByText } = renderWithRouter(<MyTicketsPage />);
+    const { getAllByText } = renderWithRouter(<MyTicketsPage />);
 
     await waitFor(() => {
-      expect(getByText('$15.00')).toBeInTheDocument();
+      // Price appears in both the badge and "Amount Paid" section
+      const priceElements = getAllByText('$15.00');
+      expect(priceElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -203,7 +210,8 @@ describe('MyTicketsPage', () => {
     const { getAllByText } = renderWithRouter(<MyTicketsPage />);
 
     await waitFor(() => {
-      const viewDetailsLinks = getAllByText(/View Details/);
+      // The component now shows "View Event Details" instead of "View Details"
+      const viewDetailsLinks = getAllByText(/View Event Details/);
       expect(viewDetailsLinks.length).toBe(mockTickets.length);
     });
   });

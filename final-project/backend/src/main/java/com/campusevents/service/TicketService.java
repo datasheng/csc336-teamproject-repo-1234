@@ -107,6 +107,21 @@ public class TicketService {
     }
     
     /**
+     * Get the campus ID for an event.
+     * 
+     * @param eventId The event ID
+     * @return The campus ID, or null if not found
+     */
+    public Long getEventCampusId(Long eventId) {
+        String sql = "SELECT campus_id FROM event WHERE id = ?";
+        Map<String, Object> result = sqlExecutor.executeQueryForMap(sql, new Object[]{eventId});
+        if (result == null) {
+            return null;
+        }
+        return ((Number) result.get("campus_id")).longValue();
+    }
+    
+    /**
      * Check if user already has a ticket of this type for this event.
      * 
      * @param userId The user ID
@@ -193,8 +208,20 @@ public class TicketService {
         String insertSql = "INSERT INTO ticket (user_id, event_id, type, time_period) VALUES (?, ?, ?, ?)";
         sqlExecutor.executeUpdate(insertSql, new Object[]{userId, eventId, type, feePeriodId});
 
+        // Calculate new ticket counts for real-time updates
+        Long newTicketsSold = ticketsSold + 1;
+        Integer remainingCapacity = capacity - newTicketsSold.intValue();
+        
+        // Get campusId and organizerId for dashboard updates
+        Long campusId = getEventCampusId(eventId);
+        Long organizerId = getEventOrganizerId(eventId);
+
         try {
-            pubSubService.publishTicketPurchased(eventId, userId, type);
+            pubSubService.publishTicketPurchased(eventId, userId, type, newTicketsSold, remainingCapacity, campusId);
+            // Also publish analytics update for org dashboard
+            if (organizerId != null) {
+                pubSubService.publishAnalyticsUpdated(eventId, organizerId);
+            }
         } catch (Exception e) {
             System.err.println("Warning: Failed to publish Pub/Sub message: " + e.getMessage());
         }
@@ -208,6 +235,21 @@ public class TicketService {
         confirmation.setMessage("Ticket purchased successfully");
         
         return confirmation;
+    }
+    
+    /**
+     * Get the organizer ID for an event.
+     * 
+     * @param eventId The event ID
+     * @return The organizer ID, or null if not found
+     */
+    public Long getEventOrganizerId(Long eventId) {
+        String sql = "SELECT organizer_id FROM event WHERE id = ?";
+        Map<String, Object> result = sqlExecutor.executeQueryForMap(sql, new Object[]{eventId});
+        if (result == null) {
+            return null;
+        }
+        return ((Number) result.get("organizer_id")).longValue();
     }
     
     /**

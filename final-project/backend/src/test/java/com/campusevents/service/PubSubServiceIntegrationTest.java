@@ -110,7 +110,7 @@ class PubSubServiceIntegrationTest {
         @DisplayName("Should successfully publish TICKET_PURCHASED notification")
         void shouldPublishTicketPurchased() {
             assertDoesNotThrow(() -> {
-                pubSubService.publishTicketPurchased(999L, 1L, "integration-test");
+                pubSubService.publishTicketPurchased(999L, 1L, "integration-test", 10L, 90, 1L);
             });
             System.out.println("Successfully published TICKET_PURCHASED notification");
         }
@@ -312,8 +312,10 @@ class PubSubServiceIntegrationTest {
             // 3. Tickets purchased
             for (int i = 0; i < 3; i++) {
                 final int userId = i + 1;
+                final long ticketsSold = i + 1;
+                final int remainingCapacity = 100 - (i + 1);
                 assertDoesNotThrow(() -> {
-                    pubSubService.publishTicketPurchased(testEventId, (long) userId, "General");
+                    pubSubService.publishTicketPurchased(testEventId, (long) userId, "General", ticketsSold, remainingCapacity, campusId);
                 }, "Should publish ticket purchased for user " + userId);
             }
             

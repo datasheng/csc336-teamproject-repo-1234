@@ -119,14 +119,143 @@ public class PubSubService {
      * @param eventId The ID of the event
      * @param userId The ID of the user who purchased
      * @param ticketType The type of ticket purchased
+     * @param newTicketsSold The new total tickets sold for this event
+     * @param remainingCapacity The remaining capacity after purchase
+     * @param campusId The campus ID for dashboard updates
      */
-    public void publishTicketPurchased(Long eventId, Long userId, String ticketType) {
+    public void publishTicketPurchased(Long eventId, Long userId, String ticketType, 
+            Long newTicketsSold, Integer remainingCapacity, Long campusId) {
         Map<String, Object> message = Map.of(
             "type", "TICKET_PURCHASED",
             "eventId", eventId,
             "userId", userId,
-            "ticketType", ticketType
+            "ticketType", ticketType,
+            "ticketsSold", newTicketsSold,
+            "remainingCapacity", remainingCapacity,
+            "campusId", campusId
         );
+        publishMessage(message);
+    }
+    
+    /**
+     * Publish an event deletion notification.
+     * 
+     * @param eventId The ID of the deleted event
+     * @param campusId The campus ID for dashboard updates
+     */
+    public void publishEventDeleted(Long eventId, Long campusId) {
+        Map<String, Object> message = Map.of(
+            "type", "EVENT_DELETED",
+            "eventId", eventId,
+            "campusId", campusId
+        );
+        publishMessage(message);
+    }
+    
+    /**
+     * Publish an event cancellation notification.
+     * 
+     * @param eventId The ID of the cancelled event
+     * @param campusId The campus ID for dashboard updates
+     */
+    public void publishEventCancelled(Long eventId, Long campusId) {
+        Map<String, Object> message = Map.of(
+            "type", "EVENT_CANCELLED",
+            "eventId", eventId,
+            "campusId", campusId
+        );
+        publishMessage(message);
+    }
+    
+    /**
+     * Publish an organization update notification.
+     * 
+     * @param organizationId The ID of the updated organization
+     */
+    public void publishOrganizationUpdated(Long organizationId) {
+        Map<String, Object> message = Map.of(
+            "type", "ORGANIZATION_UPDATED",
+            "organizationId", organizationId
+        );
+        publishMessage(message);
+    }
+    
+    /**
+     * Publish an analytics update notification.
+     * Sent when ticket purchases change analytics data.
+     * 
+     * @param eventId The ID of the event
+     * @param organizerId The ID of the organization (for org dashboard updates)
+     */
+    public void publishAnalyticsUpdated(Long eventId, Long organizerId) {
+        Map<String, Object> message = Map.of(
+            "type", "ANALYTICS_UPDATED",
+            "eventId", eventId,
+            "organizerId", organizerId
+        );
+        publishMessage(message);
+    }
+    
+    /**
+     * Publish event created with organization info for org page updates.
+     * 
+     * @param eventId The ID of the created event
+     * @param organizerId The ID of the organizing organization
+     * @param campusId The ID of the campus
+     */
+    public void publishEventCreatedWithOrg(Long eventId, Long organizerId, Long campusId) {
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("type", "EVENT_CREATED");
+        message.put("eventId", eventId);
+        message.put("organizerId", organizerId);
+        message.put("campusId", campusId);
+        publishMessage(message);
+    }
+    
+    /**
+     * Publish event updated with organization info.
+     * 
+     * @param eventId The ID of the updated event
+     * @param organizerId The ID of the organizing organization
+     */
+    public void publishEventUpdatedWithOrg(Long eventId, Long organizerId) {
+        Map<String, Object> message = Map.of(
+            "type", "EVENT_UPDATED",
+            "eventId", eventId,
+            "organizerId", organizerId
+        );
+        publishMessage(message);
+    }
+    
+    /**
+     * Publish an event deletion notification with organization info.
+     * 
+     * @param eventId The ID of the deleted event
+     * @param organizerId The ID of the organization
+     * @param campusId The campus ID for dashboard updates
+     */
+    public void publishEventDeletedWithOrg(Long eventId, Long organizerId, Long campusId) {
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("type", "EVENT_DELETED");
+        message.put("eventId", eventId);
+        message.put("organizerId", organizerId);
+        message.put("campusId", campusId);
+        publishMessage(message);
+    }
+    
+    /**
+     * Publish an event cancellation notification with organization info.
+     * 
+     * @param eventId The ID of the cancelled event
+     * @param organizerId The ID of the organization
+     * @param campusId The campus ID for dashboard updates
+     */
+    public void publishEventCancelledWithOrg(Long eventId, Long organizerId, Long campusId) {
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("type", "EVENT_CANCELLED");
+        message.put("eventId", eventId);
+        message.put("organizerId", organizerId);
+        message.put("campusId", campusId);
         publishMessage(message);
     }
     

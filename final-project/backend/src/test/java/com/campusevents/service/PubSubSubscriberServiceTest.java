@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.Map;
@@ -29,6 +30,9 @@ class PubSubSubscriberServiceTest {
     @Mock
     private WebSocketSessionManager sessionManager;
     
+    @Mock
+    private ApplicationContext applicationContext;
+    
     private PubSubSubscriberService subscriberService;
     
     @BeforeEach
@@ -38,7 +42,8 @@ class PubSubSubscriberServiceTest {
             "",  // disabled
             "test-subscription",
             messagingTemplate,
-            sessionManager
+            sessionManager,
+            applicationContext
         );
     }
     
@@ -60,7 +65,8 @@ class PubSubSubscriberServiceTest {
                 null,
                 "test-subscription",
                 messagingTemplate,
-                sessionManager
+                sessionManager,
+                applicationContext
             );
             
             assertFalse(service.isEnabled());
@@ -73,7 +79,8 @@ class PubSubSubscriberServiceTest {
                 "   ",
                 "test-subscription",
                 messagingTemplate,
-                sessionManager
+                sessionManager,
+                applicationContext
             );
             
             assertFalse(service.isEnabled());
@@ -86,7 +93,8 @@ class PubSubSubscriberServiceTest {
                 "my-project-id",
                 "test-subscription",
                 messagingTemplate,
-                sessionManager
+                sessionManager,
+                applicationContext
             );
             
             assertTrue(service.isEnabled());

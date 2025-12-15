@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getEventById, EventDTO } from '../api/events';
 import { getUserTickets, UserTicketDTO } from '../api/tickets';
 import { TicketPurchaseModal } from '../components/TicketPurchaseModal';
-import { useEventUpdates } from '../hooks/useEventUpdates';
+import { useEventUpdates, EventUpdateMessage } from '../hooks/useEventUpdates';
 
 export const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +15,8 @@ export const EventDetails = () => {
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [userTicket, setUserTicket] = useState<UserTicketDTO | null>(null);
   const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [eventCancelled, setEventCancelled] = useState(false);
+  const [eventDeleted, setEventDeleted] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -27,13 +29,50 @@ export const EventDetails = () => {
     fetchUserTicketForEvent(parseInt(id));
   }, [id]);
 
-  const handleEventUpdate = useCallback(() => {
-    if (id) {
-      fetchEvent(parseInt(id));
-    }
-  }, [id]);
+  const handleEventUpdate = useCallback((message: EventUpdateMessage) => {
+    switch (message.type) {
+      case 'EVENT_UPDATED':
+        // Refetch full event data for updated details
+        if (id) {
+          fetchEvent(parseInt(id));
+        }
+        break;
+      
+      case 'CAPACITY_UPDATED':
+        // Update capacity in place without full refetch
+        setEvent(prev => prev ? {
+          ...prev,
+          ticketsSold: message.ticketsSold ?? prev.ticketsSold,
+          availableCapacity: message.availableCapacity ?? message.remainingCapacity ?? prev.availableCapacity
+        } : null);
+        break;
 
-  useEventUpdates(id ? `/topic/event/${id}` : '', handleEventUpdate);
+      case 'EVENT_DELETED':
+        setEventDeleted(true);
+        // Redirect after brief notification
+        setTimeout(() => navigate('/events'), 3000);
+        break;
+
+      case 'EVENT_CANCELLED':
+        setEventCancelled(true);
+        // Update event description to show cancellation
+        setEvent(prev => prev ? {
+          ...prev,
+          description: prev.description.startsWith('[CANCELLED]') 
+            ? prev.description 
+            : `[CANCELLED] ${prev.description}`
+        } : null);
+        break;
+
+      default:
+        // For other message types, refetch
+        if (id) {
+          fetchEvent(parseInt(id));
+        }
+    }
+  }, [id, navigate]);
+
+  useEventUpdates(id ? `/topic/event/${id}` : '', handleEventUpdate, !!id);
 
   const fetchEvent = async (eventId: number) => {
     try {
@@ -124,6 +163,22 @@ export const EventDetails = () => {
     );
   }
 
+  // Show deleted notification and redirect
+  if (eventDeleted) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-center bg-red-50 border border-red-200 rounded-lg p-8 max-w-md">
+          <div className="text-red-600 text-5xl mb-4">🗑️</div>
+          <div className="text-xl text-red-700 font-bold mb-2">Event Deleted</div>
+          <p className="text-red-600 mb-4">This event has been removed by the organizer.</p>
+          <p className="text-stone-500 text-sm">Redirecting to events page...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isCancelled = eventCancelled || event.description.startsWith('[CANCELLED]');
+
   return (
     <div className="min-h-screen bg-stone-50 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -134,9 +189,22 @@ export const EventDetails = () => {
           ← Back to Events
         </button>
 
-        <div className="bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
-          <div className="bg-orange-600 text-white p-8">
-            <h1 className="text-3xl font-bold mb-2">{event.description}</h1>
+        {/* Cancelled event banner */}
+        {isCancelled && (
+          <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-center gap-4">
+            <div className="text-red-600 text-3xl">⚠️</div>
+            <div>
+              <p className="text-red-800 font-bold text-lg">Event Cancelled</p>
+              <p className="text-red-600">This event has been cancelled by the organizer. Ticket purchases are disabled.</p>
+            </div>
+          </div>
+        )}
+
+        <div className={`bg-white border rounded-lg shadow-sm overflow-hidden ${isCancelled ? 'border-red-200 opacity-75' : 'border-stone-200'}`}>
+          <div className={`${isCancelled ? 'bg-red-600' : 'bg-orange-600'} text-white p-8`}>
+            <h1 className="text-3xl font-bold mb-2">
+              {event.description.replace('[CANCELLED] ', '')}
+            </h1>
             <div className="flex items-center gap-4 text-orange-50">
               <span>{formatDate(event.startTime)}</span>
               <span>•</span>
@@ -270,14 +338,14 @@ export const EventDetails = () => {
               ) : (
                 <button
                   onClick={() => setIsPurchaseModalOpen(true)}
-                  disabled={event.availableCapacity === 0}
+                  disabled={event.availableCapacity === 0 || isCancelled}
                   className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
-                    event.availableCapacity === 0
+                    event.availableCapacity === 0 || isCancelled
                       ? 'bg-stone-100 text-stone-400 cursor-not-allowed opacity-50'
                       : 'bg-orange-600 text-white hover:bg-orange-700'
                   }`}
                 >
-                  {event.availableCapacity === 0 ? 'Sold Out' : 'Purchase Ticket'}
+                  {isCancelled ? 'Event Cancelled' : event.availableCapacity === 0 ? 'Sold Out' : 'Purchase Ticket'}
                 </button>
               )}
             </div>

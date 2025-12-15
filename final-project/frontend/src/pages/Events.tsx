@@ -3,7 +3,7 @@ import { getEvents, EventDTO, EventFilters as EventFiltersType } from '../api/ev
 import { EventCard } from '../components/EventCard';
 import { EventFilters } from '../components/EventFilters';
 import { Pagination } from '../components/Pagination';
-import { useEventUpdates } from '../hooks/useEventUpdates';
+import { useEventUpdates, EventUpdateMessage } from '../hooks/useEventUpdates';
 
 const ITEMS_PER_PAGE = 9;
 
@@ -13,6 +13,7 @@ export const Events = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<EventFiltersType>({});
+  const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -23,9 +24,95 @@ export const Events = () => {
     fetchEvents();
   }, [filters]);
 
-  const handleEventUpdate = useCallback(() => {
-    fetchEvents();
-  }, []);
+  const showNotification = (message: string) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleEventUpdate = useCallback((message: EventUpdateMessage) => {
+    switch (message.type) {
+      case 'EVENT_CREATED':
+        // Check if event matches current filters before adding
+        if (message.event) {
+          const eventData = message.event;
+          // Check campus filter
+          if (filters.campusId && eventData.campusId !== filters.campusId) {
+            return;
+          }
+          // Check organizer filter
+          if (filters.organizerId && eventData.organizerId !== filters.organizerId) {
+            return;
+          }
+          
+          // Add new event to list with animation-friendly approach
+          const newEvent: EventDTO = {
+            id: eventData.id,
+            organizerId: eventData.organizerId,
+            organizerName: eventData.organizerName,
+            campusId: eventData.campusId,
+            campusName: eventData.campusName,
+            capacity: eventData.capacity,
+            description: eventData.description,
+            startTime: eventData.startTime,
+            endTime: eventData.endTime,
+            costs: [], // Will be populated on detail view
+            ticketsSold: eventData.ticketsSold,
+            availableCapacity: eventData.availableCapacity,
+          };
+          setEvents(prev => [newEvent, ...prev]);
+          showNotification('New event added!');
+        } else {
+          // Fallback: refetch if no event data
+          fetchEvents();
+        }
+        break;
+
+      case 'EVENT_UPDATED':
+        if (message.event) {
+          setEvents(prev => prev.map(e => 
+            e.id === message.eventId 
+              ? { ...e, ...message.event, costs: e.costs }
+              : e
+          ));
+        } else {
+          // Fallback: refetch if no event data
+          fetchEvents();
+        }
+        break;
+
+      case 'EVENT_DELETED':
+        setEvents(prev => prev.filter(e => e.id !== message.eventId));
+        showNotification('An event has been removed');
+        break;
+
+      case 'EVENT_CANCELLED':
+        // Mark as cancelled by updating description (or could add cancelled field)
+        setEvents(prev => prev.map(e => 
+          e.id === message.eventId
+            ? { ...e, description: `[CANCELLED] ${e.description}` }
+            : e
+        ));
+        showNotification('An event has been cancelled');
+        break;
+
+      case 'CAPACITY_UPDATED':
+        // Update ticket counts for a specific event
+        setEvents(prev => prev.map(e => 
+          e.id === message.eventId
+            ? { 
+                ...e, 
+                ticketsSold: message.ticketsSold ?? e.ticketsSold,
+                availableCapacity: message.availableCapacity ?? message.remainingCapacity ?? e.availableCapacity
+              }
+            : e
+        ));
+        break;
+
+      default:
+        // Unknown message type - refetch to be safe
+        fetchEvents();
+    }
+  }, [filters]);
 
   useEventUpdates('/topic/events', handleEventUpdate);
 
@@ -72,6 +159,13 @@ export const Events = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50/20 to-stone-50 py-12">
+      {/* Real-time notification toast */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 bg-orange-600 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+          {notification}
+        </div>
+      )}
+      
       <div className="container mx-auto px-4 max-w-7xl">
         <div className="mb-12">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-stone-800 to-stone-600 bg-clip-text text-transparent mb-3">

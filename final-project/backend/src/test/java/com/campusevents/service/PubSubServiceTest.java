@@ -56,7 +56,7 @@ class PubSubServiceTest {
         @DisplayName("Should not throw when publishing ticket purchased with disabled Pub/Sub")
         void shouldNotThrowWhenPublishingTicketPurchasedDisabled() {
             assertDoesNotThrow(() -> 
-                pubSubService.publishTicketPurchased(1L, 2L, "General")
+                pubSubService.publishTicketPurchased(1L, 2L, "General", 11L, 89, 1L)
             );
         }
         
@@ -102,7 +102,7 @@ class PubSubServiceTest {
             assertAll(
                 () -> assertDoesNotThrow(() -> pubSubService.publishEventCreated(1L, 2L, 3L)),
                 () -> assertDoesNotThrow(() -> pubSubService.publishEventUpdated(1L)),
-                () -> assertDoesNotThrow(() -> pubSubService.publishTicketPurchased(1L, 2L, "VIP"))
+                () -> assertDoesNotThrow(() -> pubSubService.publishTicketPurchased(1L, 2L, "VIP", 11L, 89, 3L))
             );
         }
     }

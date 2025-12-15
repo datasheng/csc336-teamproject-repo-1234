@@ -1,16 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUserTickets, UserTicketDTO } from '../api/tickets';
+import { useTicketUpdates, TicketConfirmationMessage } from '../hooks/useTicketUpdates';
 
 export const MyTicketsPage = () => {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<UserTicketDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTickets();
   }, []);
+
+  const showNotification = (message: string) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleTicketUpdate = useCallback((message: TicketConfirmationMessage) => {
+    switch (message.type) {
+      case 'TICKET_PURCHASED':
+        // Refetch to get the new ticket with full details
+        fetchTickets();
+        showNotification(`Ticket confirmed for event!`);
+        break;
+      case 'TICKET_CANCELLED':
+      case 'TICKET_REFUNDED':
+        // Remove the ticket from the list
+        setTickets(prev => prev.filter(t => t.eventId !== message.eventId));
+        showNotification(message.type === 'TICKET_CANCELLED' ? 'Ticket cancelled' : 'Ticket refunded');
+        break;
+    }
+  }, []);
+
+  useTicketUpdates(handleTicketUpdate);
 
   const fetchTickets = async () => {
     try {
@@ -65,6 +90,13 @@ export const MyTicketsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50/20 to-stone-50 py-12">
+      {/* Real-time notification toast */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+          ✓ {notification}
+        </div>
+      )}
+
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-12">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-stone-800 to-stone-600 bg-clip-text text-transparent mb-3">
@@ -72,6 +104,7 @@ export const MyTicketsPage = () => {
           </h1>
           <p className="text-lg text-stone-600">
             Your upcoming and past event tickets
+            <span className="ml-2 text-sm text-green-600">● Live updates</span>
           </p>
         </div>
 

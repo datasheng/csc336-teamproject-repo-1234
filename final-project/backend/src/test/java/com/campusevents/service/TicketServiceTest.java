@@ -107,6 +107,22 @@ class TicketServiceTest {
                 eq(new Object[]{1L})
             )).thenReturn(descRow);
             
+            // Campus ID for real-time updates
+            Map<String, Object> campusRow = new HashMap<>();
+            campusRow.put("campus_id", 1L);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT campus_id FROM event WHERE id = ?"),
+                eq(new Object[]{1L})
+            )).thenReturn(campusRow);
+            
+            // Organizer ID for analytics updates
+            Map<String, Object> organizerRow = new HashMap<>();
+            organizerRow.put("organizer_id", 100L);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT organizer_id FROM event WHERE id = ?"),
+                eq(new Object[]{1L})
+            )).thenReturn(organizerRow);
+            
             // Act
             TicketConfirmationDTO result = ticketService.purchaseTicket(10L, request);
             
@@ -118,8 +134,8 @@ class TicketServiceTest {
             assertEquals(new BigDecimal("25.00"), result.getCost());
             assertEquals("Ticket purchased successfully", result.getMessage());
             
-            // Verify Pub/Sub was called
-            verify(pubSubService).publishTicketPurchased(1L, 10L, "General");
+            // Verify Pub/Sub was called with all parameters (eventId, userId, type, newTicketsSold, remainingCapacity, campusId)
+            verify(pubSubService).publishTicketPurchased(eq(1L), eq(10L), eq("General"), eq(51L), eq(49), eq(1L));
         }
         
         @Test
@@ -320,8 +336,8 @@ class TicketServiceTest {
             // Act
             ticketService.purchaseTicket(5L, request);
             
-            // Assert - verify Pub/Sub was called with correct parameters
-            verify(pubSubService, times(1)).publishTicketPurchased(1L, 5L, "VIP");
+            // Assert - verify Pub/Sub was called with correct parameters (eventId, userId, type, newTicketsSold, remainingCapacity, campusId)
+            verify(pubSubService, times(1)).publishTicketPurchased(eq(1L), eq(5L), eq("VIP"), eq(11L), eq(89), eq(1L));
         }
         
         @Test
@@ -351,7 +367,7 @@ class TicketServiceTest {
             assertThrows(IllegalStateException.class, () -> ticketService.purchaseTicket(5L, request));
             
             // Verify Pub/Sub was never called
-            verify(pubSubService, never()).publishTicketPurchased(anyLong(), anyLong(), anyString());
+            verify(pubSubService, never()).publishTicketPurchased(anyLong(), anyLong(), anyString(), anyLong(), anyInt(), anyLong());
         }
         
         @Test
@@ -366,7 +382,7 @@ class TicketServiceTest {
             
             assertThrows(IllegalArgumentException.class, () -> ticketService.purchaseTicket(5L, request));
             
-            verify(pubSubService, never()).publishTicketPurchased(anyLong(), anyLong(), anyString());
+            verify(pubSubService, never()).publishTicketPurchased(anyLong(), anyLong(), anyString(), anyLong(), anyInt(), anyLong());
         }
         
         private void setupSuccessfulPurchaseMocks(Long eventId, String type, int capacity, int ticketsSold, BigDecimal cost) {
@@ -419,6 +435,22 @@ class TicketServiceTest {
                 eq("SELECT description FROM event WHERE id = ?"),
                 eq(new Object[]{eventId})
             )).thenReturn(descRow);
+            
+            // Mock campus_id query for real-time updates
+            Map<String, Object> campusRow = new HashMap<>();
+            campusRow.put("campus_id", 1L);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT campus_id FROM event WHERE id = ?"),
+                eq(new Object[]{eventId})
+            )).thenReturn(campusRow);
+            
+            // Mock organizer_id query for analytics updates
+            Map<String, Object> organizerRow = new HashMap<>();
+            organizerRow.put("organizer_id", 100L);
+            when(sqlExecutor.executeQueryForMap(
+                eq("SELECT organizer_id FROM event WHERE id = ?"),
+                eq(new Object[]{eventId})
+            )).thenReturn(organizerRow);
         }
     }
     

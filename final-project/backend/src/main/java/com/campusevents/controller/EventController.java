@@ -25,6 +25,8 @@ import java.util.Optional;
  * - POST /api/events - Create a new event (authenticated, must be org leader)
  * - GET /api/events/{id} - Get event details with availability
  * - PUT /api/events/{id} - Update an event (authenticated, must be org leader)
+ * - DELETE /api/events/{id} - Delete an event (authenticated, must be org leader)
+ * - PATCH /api/events/{id}/cancel - Cancel an event (authenticated, must be org leader)
  * - GET /api/events/{id}/analytics - Get event analytics (authenticated, must be org leader)
  */
 @RestController
@@ -318,6 +320,118 @@ public class EventController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ErrorResponse("Internal Server Error", "An error occurred while fetching analytics", 500)
+            );
+        }
+    }
+    
+    /**
+     * Delete an event.
+     * Only organization leaders can delete events for their organization.
+     * This permanently removes the event and all associated tickets.
+     * 
+     * @param user The authenticated user (injected by @CurrentUser)
+     * @param id The event ID to delete
+     * @return 204 No Content on success
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteEvent(
+            @CurrentUser User user,
+            @PathVariable Long id) {
+        try {
+            // Check if user is authenticated
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    new ErrorResponse("Unauthorized", "You must be logged in to delete events", 401)
+                );
+            }
+            
+            // Check if event exists
+            if (!eventService.eventExists(id)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    new ErrorResponse("Not Found", "Event not found", 404)
+                );
+            }
+            
+            // Get the organizer ID for the event
+            Optional<Long> organizerIdOpt = eventService.getEventOrganizerId(id);
+            if (organizerIdOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    new ErrorResponse("Not Found", "Event not found", 404)
+                );
+            }
+            
+            Long organizerId = organizerIdOpt.get();
+            
+            // Verify user is a leader of the organization
+            if (!eventService.isLeader(user.getId(), organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    new ErrorResponse("Forbidden", "You must be a leader of the organization to delete events", 403)
+                );
+            }
+            
+            // Delete the event
+            eventService.deleteEvent(id);
+            return ResponseEntity.noContent().build();
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new ErrorResponse("Internal Server Error", "An error occurred while deleting the event", 500)
+            );
+        }
+    }
+    
+    /**
+     * Cancel an event.
+     * Only organization leaders can cancel events for their organization.
+     * This marks the event as cancelled but does not delete it.
+     * 
+     * @param user The authenticated user (injected by @CurrentUser)
+     * @param id The event ID to cancel
+     * @return Updated event details with cancelled status
+     */
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelEvent(
+            @CurrentUser User user,
+            @PathVariable Long id) {
+        try {
+            // Check if user is authenticated
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    new ErrorResponse("Unauthorized", "You must be logged in to cancel events", 401)
+                );
+            }
+            
+            // Check if event exists
+            if (!eventService.eventExists(id)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    new ErrorResponse("Not Found", "Event not found", 404)
+                );
+            }
+            
+            // Get the organizer ID for the event
+            Optional<Long> organizerIdOpt = eventService.getEventOrganizerId(id);
+            if (organizerIdOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    new ErrorResponse("Not Found", "Event not found", 404)
+                );
+            }
+            
+            Long organizerId = organizerIdOpt.get();
+            
+            // Verify user is a leader of the organization
+            if (!eventService.isLeader(user.getId(), organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    new ErrorResponse("Forbidden", "You must be a leader of the organization to cancel events", 403)
+                );
+            }
+            
+            // Cancel the event
+            EventDTO cancelledEvent = eventService.cancelEvent(id);
+            return ResponseEntity.ok(cancelledEvent);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new ErrorResponse("Internal Server Error", "An error occurred while cancelling the event", 500)
             );
         }
     }
