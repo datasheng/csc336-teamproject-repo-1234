@@ -62,17 +62,25 @@ public class TicketService {
     
     /**
      * Get the number of tickets sold for an event.
+     * Uses SQL function get_tickets_sold for this query.
      * 
      * @param eventId The event ID
      * @return The number of tickets sold
      */
     public Long getTicketsSold(Long eventId) {
-        String sql = "SELECT COUNT(*) as count FROM ticket WHERE event_id = ?";
-        Map<String, Object> result = sqlExecutor.executeQueryForMap(sql, new Object[]{eventId});
-        if (result == null) {
-            return 0L;
+        String sql = "SELECT get_tickets_sold(?)";
+        try {
+            Long count = sqlExecutor.executeScalar(sql, new Object[]{eventId}, Long.class);
+            return count != null ? count : 0L;
+        } catch (Exception e) {
+            // Fallback to direct query if function doesn't exist
+            String fallbackSql = "SELECT COUNT(*) as count FROM ticket WHERE event_id = ?";
+            Map<String, Object> result = sqlExecutor.executeQueryForMap(fallbackSql, new Object[]{eventId});
+            if (result == null) {
+                return 0L;
+            }
+            return ((Number) result.get("count")).longValue();
         }
-        return ((Number) result.get("count")).longValue();
     }
     
     /**
@@ -135,6 +143,26 @@ public class TicketService {
     }
     
     /**
+     * Check if an event has capacity available.
+     * Uses SQL function check_event_capacity.
+     * 
+     * @param eventId The event ID
+     * @return true if capacity is available
+     */
+    public boolean hasCapacityAvailable(Long eventId) {
+        try {
+            String sql = "SELECT check_event_capacity(?)";
+            Boolean result = sqlExecutor.executeScalar(sql, new Object[]{eventId}, Boolean.class);
+            return result != null && result;
+        } catch (Exception e) {
+            // Fallback to manual check if function doesn't exist
+            Integer capacity = getEventCapacity(eventId);
+            Long ticketsSold = getTicketsSold(eventId);
+            return capacity != null && ticketsSold < capacity;
+        }
+    }
+    
+    /**
      * Get the current fee period ID.
      * Returns the fee period that contains NOW().
      * If no fee period exists, returns null.
@@ -158,6 +186,7 @@ public class TicketService {
     
     /**
      * Purchase a ticket for an event.
+     * Uses SQL function purchase_ticket for validation and insertion.
      * 
      * @param userId The user ID
      * @param request The purchase request
@@ -170,29 +199,9 @@ public class TicketService {
         Long eventId = request.getEventId();
         String type = request.getType();
         
-        // Check event exists
-        if (!eventExists(eventId)) {
-            throw new IllegalArgumentException("Event not found");
-        }
-        
-        // Check capacity
+        // Get capacity info before purchase for real-time updates
         Integer capacity = getEventCapacity(eventId);
         Long ticketsSold = getTicketsSold(eventId);
-        
-        if (ticketsSold >= capacity) {
-            throw new IllegalStateException("Event is sold out");
-        }
-        
-        // Check cost type exists
-        BigDecimal cost = getTicketCost(eventId, type);
-        if (cost == null) {
-            throw new IllegalArgumentException("Invalid ticket type for this event");
-        }
-        
-        // Check if user already has this ticket
-        if (userHasTicket(userId, eventId, type)) {
-            throw new IllegalStateException("You already have a ticket of this type for this event");
-        }
         
         // Simulate payment processing
         try {
@@ -205,8 +214,50 @@ public class TicketService {
         // Get current fee period
         Integer feePeriodId = getCurrentFeePeriodId();
         
-        String insertSql = "INSERT INTO ticket (user_id, event_id, type, time_period) VALUES (?, ?, ?, ?)";
-        sqlExecutor.executeUpdate(insertSql, new Object[]{userId, eventId, type, feePeriodId});
+        // Use SQL function for validation and insertion
+        try {
+            String sql = "SELECT purchase_ticket(?, ?, ?, ?)";
+            String result = sqlExecutor.executeScalar(sql, new Object[]{userId.intValue(), eventId.intValue(), type, feePeriodId}, String.class);
+            
+            if (result != null) {
+                switch (result) {
+                    case "EVENT_NOT_FOUND":
+                        throw new IllegalArgumentException("Event not found");
+                    case "SOLD_OUT":
+                        throw new IllegalStateException("Event is sold out");
+                    case "INVALID_TYPE":
+                        throw new IllegalArgumentException("Invalid ticket type for this event");
+                    case "ALREADY_PURCHASED":
+                        throw new IllegalStateException("You already have a ticket of this type for this event");
+                    case "SUCCESS":
+                        break;
+                    default:
+                        throw new RuntimeException("Unexpected result from purchase_ticket: " + result);
+                }
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            // Fallback to direct validation and insert
+            if (!eventExists(eventId)) {
+                throw new IllegalArgumentException("Event not found");
+            }
+            if (ticketsSold >= capacity) {
+                throw new IllegalStateException("Event is sold out");
+            }
+            BigDecimal costCheck = getTicketCost(eventId, type);
+            if (costCheck == null) {
+                throw new IllegalArgumentException("Invalid ticket type for this event");
+            }
+            if (userHasTicket(userId, eventId, type)) {
+                throw new IllegalStateException("You already have a ticket of this type for this event");
+            }
+            String insertSql = "INSERT INTO ticket (user_id, event_id, type, time_period) VALUES (?, ?, ?, ?)";
+            sqlExecutor.executeUpdate(insertSql, new Object[]{userId, eventId, type, feePeriodId});
+        }
+        
+        // Get cost for confirmation
+        BigDecimal cost = getTicketCost(eventId, type);
 
         // Calculate new ticket counts for real-time updates
         Long newTicketsSold = ticketsSold + 1;
@@ -250,6 +301,30 @@ public class TicketService {
             return null;
         }
         return ((Number) result.get("organizer_id")).longValue();
+    }
+    
+    /**
+     * Get the number of tickets a user has for a specific event.
+     * Uses SQL function get_user_ticket_count.
+     * 
+     * @param userId The user ID
+     * @param eventId The event ID
+     * @return The number of tickets the user has for this event
+     */
+    public int getUserTicketCount(Long userId, Long eventId) {
+        try {
+            String sql = "SELECT get_user_ticket_count(?, ?)";
+            Integer count = sqlExecutor.executeScalar(sql, new Object[]{userId.intValue(), eventId.intValue()}, Integer.class);
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            // Fallback to direct query if function doesn't exist
+            String fallbackSql = "SELECT COUNT(*) FROM ticket WHERE user_id = ? AND event_id = ?";
+            Map<String, Object> result = sqlExecutor.executeQueryForMap(fallbackSql, new Object[]{userId, eventId});
+            if (result == null) {
+                return 0;
+            }
+            return ((Number) result.get("count")).intValue();
+        }
     }
     
     /**

@@ -181,6 +181,8 @@ public class PubSubSubscriberService {
                 eventData.put("endTime", event.getEndTime() != null ? event.getEndTime().toString() : "");
                 eventData.put("ticketsSold", event.getTicketsSold());
                 eventData.put("availableCapacity", event.getAvailableCapacity());
+                eventData.put("tags", event.getTags() != null ? event.getTags() : new java.util.ArrayList<>());
+                eventData.put("costs", event.getCosts() != null ? event.getCosts() : new java.util.ArrayList<>());
                 eventPayload.put("event", eventData);
             }
         } catch (Exception e) {
@@ -238,6 +240,8 @@ public class PubSubSubscriberService {
                 eventData.put("endTime", event.getEndTime() != null ? event.getEndTime().toString() : "");
                 eventData.put("ticketsSold", event.getTicketsSold());
                 eventData.put("availableCapacity", event.getAvailableCapacity());
+                eventData.put("tags", event.getTags() != null ? event.getTags() : new java.util.ArrayList<>());
+                eventData.put("costs", event.getCosts() != null ? event.getCosts() : new java.util.ArrayList<>());
                 eventPayload.put("event", eventData);
             }
         } catch (Exception e) {

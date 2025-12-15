@@ -11,6 +11,11 @@ export type EventMessageType =
   | 'ANALYTICS_UPDATED'
   | 'ORGANIZATION_UPDATED';
 
+export interface CostData {
+  type: string;
+  cost: number;
+}
+
 export interface EventData {
   id: number;
   organizerId: number;
@@ -23,6 +28,8 @@ export interface EventData {
   endTime: string;
   ticketsSold: number;
   availableCapacity: number;
+  tags?: string[];
+  costs?: CostData[];
 }
 
 export interface EventUpdateMessage {

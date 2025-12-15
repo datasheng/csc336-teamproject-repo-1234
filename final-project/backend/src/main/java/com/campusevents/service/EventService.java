@@ -109,11 +109,7 @@ public class EventService {
      */
     @Transactional
     public EventDTO createEvent(CreateEventRequest request) {
-        // Insert the event
-        String eventSql = "INSERT INTO event (organizer_id, campus_id, capacity, description, start_time, end_time) " +
-                          "VALUES (?, ?, ?, ?, ?, ?) RETURNING id";
-        
-        // We use executeInsert which returns the generated ID
+        // Insert the event and get the generated ID
         Long eventId = sqlExecutor.executeInsert(
             "INSERT INTO event (organizer_id, campus_id, capacity, description, start_time, end_time) " +
             "VALUES (?, ?, ?, ?, ?, ?)",
@@ -126,6 +122,10 @@ public class EventService {
                 Timestamp.valueOf(request.getEndTime())
             }
         );
+        
+        if (eventId == null) {
+            throw new RuntimeException("Failed to create event - no ID returned");
+        }
         
         // Insert costs if provided
         if (request.getCosts() != null && !request.getCosts().isEmpty()) {
@@ -276,7 +276,7 @@ public class EventService {
     
     /**
      * Delete an event.
-     * Also deletes associated tickets and costs.
+     * Uses SQL function delete_event_cascade for cascading deletes.
      * 
      * @param eventId The event ID to delete
      * @return true if deleted successfully
@@ -293,28 +293,27 @@ public class EventService {
         
         Long organizerId = organizerIdOpt.get();
         
-        // Delete associated tickets first (foreign key constraint)
-        String deleteTicketsSql = "DELETE FROM ticket WHERE event_id = ?";
-        sqlExecutor.executeUpdate(deleteTicketsSql, new Object[]{eventId});
-        
-        // Delete associated costs
-        String deleteCostsSql = "DELETE FROM cost WHERE event_id = ?";
-        sqlExecutor.executeUpdate(deleteCostsSql, new Object[]{eventId});
-        
-        // Delete associated tags
-        String deleteTagsSql = "DELETE FROM event_tag WHERE event_id = ?";
-        sqlExecutor.executeUpdate(deleteTagsSql, new Object[]{eventId});
-        
-        // Delete the event
-        String deleteEventSql = "DELETE FROM event WHERE id = ?";
-        int rowsAffected = sqlExecutor.executeUpdate(deleteEventSql, new Object[]{eventId});
-        
-        if (rowsAffected > 0) {
-            // Publish real-time update
-            pubSubService.publishEventDeletedWithOrg(eventId, organizerId, campusId);
+        // Use SQL function for cascading delete
+        try {
+            String sql = "SELECT delete_event_cascade(?)";
+            Boolean success = sqlExecutor.executeScalar(sql, new Object[]{eventId.intValue()}, Boolean.class);
+            if (success != null && success) {
+                pubSubService.publishEventDeletedWithOrg(eventId, organizerId, campusId);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            // Fallback to direct SQL
+            sqlExecutor.executeUpdate("DELETE FROM ticket WHERE event_id = ?", new Object[]{eventId});
+            sqlExecutor.executeUpdate("DELETE FROM cost WHERE event_id = ?", new Object[]{eventId});
+            sqlExecutor.executeUpdate("DELETE FROM event_tag WHERE event_id = ?", new Object[]{eventId});
+            int rowsAffected = sqlExecutor.executeUpdate("DELETE FROM event WHERE id = ?", new Object[]{eventId});
+            if (rowsAffected > 0) {
+                pubSubService.publishEventDeletedWithOrg(eventId, organizerId, campusId);
+                return true;
+            }
+            return false;
         }
-        
-        return rowsAffected > 0;
     }
     
     /**
@@ -510,29 +509,27 @@ public class EventService {
     
     /**
      * Get analytics for an event.
-     * Includes ticket counts and revenue breakdown by type.
+     * Uses SQL function get_event_analytics for ticket counts and revenue breakdown by type.
      * 
      * @param eventId The event ID
      * @return Analytics data for the event
      */
     public EventAnalyticsDTO getEventAnalytics(Long eventId) {
-        // Get ticket counts and revenue by type
-        String byTypeSql = "SELECT type, COUNT(*) as count, SUM(c.cost) as revenue " +
-                          "FROM ticket t JOIN cost c ON t.event_id = c.event_id AND t.type = c.type " +
-                          "WHERE t.event_id = ? GROUP BY type";
+        // Use stored function to get ticket counts and revenue by type
+        String byTypeSql = "SELECT * FROM get_event_analytics(?)";
         
         List<Map<String, Object>> typeResults = sqlExecutor.executeQuery(byTypeSql, new Object[]{eventId});
         
         List<TicketTypeAnalyticsDTO> byType = typeResults.stream()
             .map(row -> new TicketTypeAnalyticsDTO(
-                (String) row.get("type"),
-                ((Number) row.get("count")).longValue(),
+                (String) row.get("ticket_type"),
+                ((Number) row.get("ticket_count")).longValue(),
                 row.get("revenue") != null ? new BigDecimal(row.get("revenue").toString()) : BigDecimal.ZERO
             ))
             .collect(Collectors.toList());
         
-        // Get total tickets
-        String totalSql = "SELECT COUNT(*) as total_tickets FROM ticket WHERE event_id = ?";
+        // Use stored function to get total tickets
+        String totalSql = "SELECT get_tickets_sold(?)";
         Long totalTickets = sqlExecutor.executeScalar(totalSql, new Object[]{eventId}, Long.class);
         if (totalTickets == null) {
             totalTickets = 0L;

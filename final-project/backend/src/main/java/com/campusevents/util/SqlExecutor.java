@@ -143,10 +143,33 @@ public class SqlExecutor {
      */
     public Long executeInsert(String sql, Object[] params) {
         try {
+            // For PostgreSQL, use RETURNING id for reliable ID retrieval
+            String sqlWithReturning = sql;
+            if (!sql.toLowerCase().contains("returning")) {
+                sqlWithReturning = sql + " RETURNING id";
+            }
+            
+            // Try using queryForMap with RETURNING clause first
+            try {
+                Map<String, Object> result;
+                if (params == null || params.length == 0) {
+                    result = jdbcTemplate.queryForMap(sqlWithReturning);
+                } else {
+                    result = jdbcTemplate.queryForMap(sqlWithReturning, params);
+                }
+                if (result != null && result.get("id") != null) {
+                    return ((Number) result.get("id")).longValue();
+                }
+            } catch (Exception e) {
+                // Fall back to KeyHolder approach
+            }
+            
+            // Fallback: use KeyHolder approach
             KeyHolder keyHolder = new GeneratedKeyHolder();
+            final String finalSql = sql.replace(" RETURNING id", ""); // Remove RETURNING for this approach
 
             jdbcTemplate.update(connection -> {
-                PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                PreparedStatement ps = connection.prepareStatement(finalSql, Statement.RETURN_GENERATED_KEYS);
                 if (params != null) {
                     for (int i = 0; i < params.length; i++) {
                         ps.setObject(i + 1, params[i]);

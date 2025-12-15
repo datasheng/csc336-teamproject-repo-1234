@@ -55,9 +55,10 @@ export const Events = () => {
             description: eventData.description,
             startTime: eventData.startTime,
             endTime: eventData.endTime,
-            costs: [], // Will be populated on detail view
+            costs: eventData.costs || [],
             ticketsSold: eventData.ticketsSold,
             availableCapacity: eventData.availableCapacity,
+            tags: eventData.tags || [],
           };
           setEvents(prev => [newEvent, ...prev]);
           showNotification('New event added!');
@@ -71,7 +72,12 @@ export const Events = () => {
         if (message.event) {
           setEvents(prev => prev.map(e => 
             e.id === message.eventId 
-              ? { ...e, ...message.event, costs: e.costs }
+              ? { 
+                  ...e, 
+                  ...message.event, 
+                  costs: message.event.costs || e.costs,
+                  tags: message.event.tags || e.tags 
+                }
               : e
           ));
         } else {

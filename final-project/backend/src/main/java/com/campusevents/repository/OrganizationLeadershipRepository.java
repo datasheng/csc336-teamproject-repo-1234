@@ -75,13 +75,31 @@ public class OrganizationLeadershipRepository {
     
     /**
      * Add a user as a leader of an organization.
+     * Uses SQL function add_org_leader for validation and insertion.
      * 
      * @param userId The user ID
      * @param orgId The organization ID
      */
     public void addLeader(Long userId, Long orgId) {
-        String sql = "INSERT INTO org_leadership (user_id, org_id) VALUES (?, ?)";
-        sqlExecutor.executeUpdate(sql, new Object[]{userId, orgId});
+        // Use SQL function for adding leader
+        try {
+            String sql = "SELECT add_org_leader(?, ?)";
+            String result = sqlExecutor.executeScalar(sql, new Object[]{userId.intValue(), orgId.intValue()}, String.class);
+            
+            if (result != null && !result.equals("SUCCESS")) {
+                // Log or handle specific errors if needed
+                // For now, fall through to ensure leader is added
+                if (!result.equals("ALREADY_LEADER")) {
+                    throw new RuntimeException("Failed to add leader: " + result);
+                }
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            // Fallback to direct insert
+            String sql = "INSERT INTO org_leadership (user_id, org_id) VALUES (?, ?)";
+            sqlExecutor.executeUpdate(sql, new Object[]{userId, orgId});
+        }
     }
     
     /**

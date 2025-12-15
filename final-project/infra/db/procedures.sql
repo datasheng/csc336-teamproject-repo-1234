@@ -195,3 +195,241 @@ BEGIN
     );
 END;
 $$;
+
+-- ============================================================================
+-- Procedure: Delete Event (with cascading deletes)
+-- Deletes an event and all associated tickets, costs, and tags
+-- Returns TRUE if successful, FALSE if event not found
+-- ============================================================================
+CREATE OR REPLACE FUNCTION delete_event_cascade(p_event_id INTEGER)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Check if event exists
+    IF NOT EXISTS (SELECT 1 FROM event WHERE id = p_event_id) THEN
+        RETURN FALSE;
+    END IF;
+
+    -- Delete associated tickets first (foreign key constraint)
+    DELETE FROM ticket WHERE event_id = p_event_id;
+    
+    -- Delete associated costs
+    DELETE FROM cost WHERE event_id = p_event_id;
+    
+    -- Delete associated tags
+    DELETE FROM event_tag WHERE event_id = p_event_id;
+    
+    -- Delete the event
+    DELETE FROM event WHERE id = p_event_id;
+    
+    RETURN TRUE;
+END;
+$$;
+
+-- ============================================================================
+-- Function: Get Event Analytics
+-- Returns ticket counts and revenue breakdown for an event
+-- ============================================================================
+CREATE OR REPLACE FUNCTION get_event_analytics(p_event_id INTEGER)
+RETURNS TABLE (
+    ticket_type VARCHAR(50),
+    ticket_count BIGINT,
+    revenue DECIMAL(10,2)
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        t.type as ticket_type,
+        COUNT(*)::BIGINT as ticket_count,
+        COALESCE(SUM(c.cost), 0)::DECIMAL(10,2) as revenue
+    FROM ticket t 
+    JOIN cost c ON t.event_id = c.event_id AND t.type = c.type 
+    WHERE t.event_id = p_event_id 
+    GROUP BY t.type;
+END;
+$$;
+
+-- ============================================================================
+-- Function: Get Total Tickets Sold for an Event
+-- ============================================================================
+CREATE OR REPLACE FUNCTION get_tickets_sold(p_event_id INTEGER)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    ticket_count BIGINT;
+BEGIN
+    SELECT COUNT(*) INTO ticket_count 
+    FROM ticket 
+    WHERE event_id = p_event_id;
+    
+    RETURN COALESCE(ticket_count, 0);
+END;
+$$;
+
+-- ============================================================================
+-- Function: Check Event Capacity Available
+-- Returns TRUE if there's capacity available for the event
+-- ============================================================================
+CREATE OR REPLACE FUNCTION check_event_capacity(p_event_id INTEGER)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_capacity INTEGER;
+    v_tickets_sold BIGINT;
+BEGIN
+    SELECT capacity INTO v_capacity FROM event WHERE id = p_event_id;
+    
+    IF v_capacity IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    
+    SELECT COUNT(*) INTO v_tickets_sold FROM ticket WHERE event_id = p_event_id;
+    
+    RETURN v_tickets_sold < v_capacity;
+END;
+$$;
+
+-- ============================================================================
+-- Function: Purchase Ticket
+-- Validates capacity and ticket type, then inserts the ticket
+-- Returns: 'SUCCESS', 'EVENT_NOT_FOUND', 'SOLD_OUT', 'INVALID_TYPE', 'ALREADY_PURCHASED'
+-- ============================================================================
+CREATE OR REPLACE FUNCTION purchase_ticket(
+    p_user_id INTEGER,
+    p_event_id INTEGER,
+    p_type VARCHAR(50),
+    p_fee_period_id INTEGER
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_capacity INTEGER;
+    v_tickets_sold BIGINT;
+BEGIN
+    -- Check if event exists
+    IF NOT EXISTS (SELECT 1 FROM event WHERE id = p_event_id) THEN
+        RETURN 'EVENT_NOT_FOUND';
+    END IF;
+    
+    -- Get event capacity
+    SELECT capacity INTO v_capacity FROM event WHERE id = p_event_id;
+    
+    -- Get current tickets sold
+    SELECT COUNT(*) INTO v_tickets_sold FROM ticket WHERE event_id = p_event_id;
+    
+    -- Check capacity
+    IF v_tickets_sold >= v_capacity THEN
+        RETURN 'SOLD_OUT';
+    END IF;
+    
+    -- Check if ticket type exists
+    IF NOT EXISTS (SELECT 1 FROM cost WHERE event_id = p_event_id AND type = p_type) THEN
+        RETURN 'INVALID_TYPE';
+    END IF;
+    
+    -- Check if user already has this ticket
+    IF EXISTS (SELECT 1 FROM ticket WHERE user_id = p_user_id AND event_id = p_event_id AND type = p_type) THEN
+        RETURN 'ALREADY_PURCHASED';
+    END IF;
+    
+    -- Insert the ticket
+    INSERT INTO ticket (user_id, event_id, type, time_period) 
+    VALUES (p_user_id, p_event_id, p_type, p_fee_period_id);
+    
+    RETURN 'SUCCESS';
+END;
+$$;
+
+-- ============================================================================
+-- Function: Register User
+-- Registers a new user with email uniqueness check
+-- Returns: user ID on success, -1 if email exists, -2 if invalid campus
+-- ============================================================================
+CREATE OR REPLACE FUNCTION register_user(
+    p_first_name VARCHAR(100),
+    p_last_name VARCHAR(100),
+    p_email VARCHAR(255),
+    p_password VARCHAR(255),
+    p_campus_id INTEGER
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_user_id INTEGER;
+BEGIN
+    -- Check if email already exists
+    IF EXISTS (SELECT 1 FROM "user" WHERE email = p_email) THEN
+        RETURN -1;
+    END IF;
+    
+    -- Check if campus exists
+    IF NOT EXISTS (SELECT 1 FROM campus WHERE id = p_campus_id) THEN
+        RETURN -2;
+    END IF;
+    
+    -- Insert the user
+    INSERT INTO "user" (first_name, last_name, email, password, campus_id)
+    VALUES (p_first_name, p_last_name, p_email, p_password, p_campus_id)
+    RETURNING id INTO v_user_id;
+    
+    RETURN v_user_id;
+END;
+$$;
+
+-- ============================================================================
+-- Function: Add Organization Leader
+-- Adds a user as a leader of an organization with validation
+-- Returns: 'SUCCESS', 'USER_NOT_FOUND', 'ORG_NOT_FOUND', 'ALREADY_LEADER'
+-- ============================================================================
+CREATE OR REPLACE FUNCTION add_org_leader(p_user_id INTEGER, p_org_id INTEGER)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Check if user exists
+    IF NOT EXISTS (SELECT 1 FROM "user" WHERE id = p_user_id) THEN
+        RETURN 'USER_NOT_FOUND';
+    END IF;
+    
+    -- Check if organization exists
+    IF NOT EXISTS (SELECT 1 FROM organization WHERE id = p_org_id) THEN
+        RETURN 'ORG_NOT_FOUND';
+    END IF;
+    
+    -- Check if already a leader
+    IF EXISTS (SELECT 1 FROM org_leadership WHERE user_id = p_user_id AND org_id = p_org_id) THEN
+        RETURN 'ALREADY_LEADER';
+    END IF;
+    
+    -- Add as leader
+    INSERT INTO org_leadership (user_id, org_id) VALUES (p_user_id, p_org_id);
+    
+    RETURN 'SUCCESS';
+END;
+$$;
+
+-- ============================================================================
+-- Function: Get User Ticket Count for Event
+-- Returns number of tickets a user has for a specific event
+-- ============================================================================
+CREATE OR REPLACE FUNCTION get_user_ticket_count(p_user_id INTEGER, p_event_id INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO v_count 
+    FROM ticket 
+    WHERE user_id = p_user_id AND event_id = p_event_id;
+    
+    RETURN COALESCE(v_count, 0);
+END;
+$$;

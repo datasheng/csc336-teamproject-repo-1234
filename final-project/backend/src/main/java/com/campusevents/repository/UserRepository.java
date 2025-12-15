@@ -63,11 +63,38 @@ public class UserRepository {
     
     /**
      * Save a new user to the database.
+     * Uses SQL function register_user for validation and insertion.
      * 
      * @param user The user to save (password should already be hashed)
      * @return The saved user with generated ID
      */
     public User save(User user) {
+        // Use SQL function for registration
+        try {
+            String sql = "SELECT register_user(?, ?, ?, ?, ?)";
+            Integer result = sqlExecutor.executeScalar(sql, new Object[]{
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getPassword(),
+                user.getCampusId().intValue()
+            }, Integer.class);
+            
+            if (result != null && result > 0) {
+                user.setId(result.longValue());
+                return user;
+            } else if (result != null && result == -1) {
+                throw new RuntimeException("Email already registered");
+            } else if (result != null && result == -2) {
+                throw new RuntimeException("Invalid campus");
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            // Fallback to direct insert
+        }
+        
+        // Fallback to direct insert
         String sql = "INSERT INTO \"user\" (first_name, last_name, email, password, campus_id) " +
                      "VALUES (?, ?, ?, ?, ?)";
         
