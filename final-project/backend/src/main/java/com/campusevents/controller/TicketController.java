@@ -76,6 +76,11 @@ public class TicketController {
                 new ErrorResponse("Conflict", e.getMessage(), 409)
             );
         } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Ticket purchase error: " + e.getClass().getName() + " - " + e.getMessage());
+            if (e.getCause() != null) {
+                System.err.println("Caused by: " + e.getCause().getClass().getName() + " - " + e.getCause().getMessage());
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ErrorResponse("Internal Server Error", "An error occurred while purchasing the ticket", 500)
             );

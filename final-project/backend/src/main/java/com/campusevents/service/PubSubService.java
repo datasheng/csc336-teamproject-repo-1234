@@ -125,15 +125,20 @@ public class PubSubService {
      */
     public void publishTicketPurchased(Long eventId, Long userId, String ticketType, 
             Long newTicketsSold, Integer remainingCapacity, Long campusId) {
-        Map<String, Object> message = Map.of(
-            "type", "TICKET_PURCHASED",
-            "eventId", eventId,
-            "userId", userId,
-            "ticketType", ticketType,
-            "ticketsSold", newTicketsSold,
-            "remainingCapacity", remainingCapacity,
-            "campusId", campusId
-        );
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("type", "TICKET_PURCHASED");
+        message.put("eventId", eventId);
+        message.put("userId", userId);
+        message.put("ticketType", ticketType);
+        if (newTicketsSold != null) {
+            message.put("ticketsSold", newTicketsSold);
+        }
+        if (remainingCapacity != null) {
+            message.put("remainingCapacity", remainingCapacity);
+        }
+        if (campusId != null) {
+            message.put("campusId", campusId);
+        }
         publishMessage(message);
     }
     
@@ -144,11 +149,12 @@ public class PubSubService {
      * @param campusId The campus ID for dashboard updates
      */
     public void publishEventDeleted(Long eventId, Long campusId) {
-        Map<String, Object> message = Map.of(
-            "type", "EVENT_DELETED",
-            "eventId", eventId,
-            "campusId", campusId
-        );
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("type", "EVENT_DELETED");
+        message.put("eventId", eventId);
+        if (campusId != null) {
+            message.put("campusId", campusId);
+        }
         publishMessage(message);
     }
     
@@ -159,11 +165,12 @@ public class PubSubService {
      * @param campusId The campus ID for dashboard updates
      */
     public void publishEventCancelled(Long eventId, Long campusId) {
-        Map<String, Object> message = Map.of(
-            "type", "EVENT_CANCELLED",
-            "eventId", eventId,
-            "campusId", campusId
-        );
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("type", "EVENT_CANCELLED");
+        message.put("eventId", eventId);
+        if (campusId != null) {
+            message.put("campusId", campusId);
+        }
         publishMessage(message);
     }
     
@@ -188,11 +195,12 @@ public class PubSubService {
      * @param organizerId The ID of the organization (for org dashboard updates)
      */
     public void publishAnalyticsUpdated(Long eventId, Long organizerId) {
-        Map<String, Object> message = Map.of(
-            "type", "ANALYTICS_UPDATED",
-            "eventId", eventId,
-            "organizerId", organizerId
-        );
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("type", "ANALYTICS_UPDATED");
+        message.put("eventId", eventId);
+        if (organizerId != null) {
+            message.put("organizerId", organizerId);
+        }
         publishMessage(message);
     }
     
@@ -219,11 +227,12 @@ public class PubSubService {
      * @param organizerId The ID of the organizing organization
      */
     public void publishEventUpdatedWithOrg(Long eventId, Long organizerId) {
-        Map<String, Object> message = Map.of(
-            "type", "EVENT_UPDATED",
-            "eventId", eventId,
-            "organizerId", organizerId
-        );
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("type", "EVENT_UPDATED");
+        message.put("eventId", eventId);
+        if (organizerId != null) {
+            message.put("organizerId", organizerId);
+        }
         publishMessage(message);
     }
     

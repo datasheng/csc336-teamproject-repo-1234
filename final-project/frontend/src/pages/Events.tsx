@@ -114,11 +114,27 @@ export const Events = () => {
         ));
         break;
 
+      case 'ORGANIZATION_UPDATED':
+        // Organization name/details changed - could refetch to get updated names
+        // but only if we have events from this organization
+        if (message.organizationId) {
+          const hasEventsFromOrg = events.some(e => e.organizerId === message.organizationId);
+          if (hasEventsFromOrg) {
+            fetchEvents();
+          }
+        }
+        break;
+
+      case 'ANALYTICS_UPDATED':
+        // Analytics updates are for org dashboards, not the events list
+        // No action needed on the events page
+        break;
+
       default:
-        // Unknown message type - refetch to be safe
-        fetchEvents();
+        // Log unknown message types for debugging but don't refetch
+        console.log('[Events] Received unhandled message type:', message.type);
     }
-  }, [filters]);
+  }, [filters, events]);
 
   useEventUpdates('/topic/events', handleEventUpdate);
 

@@ -60,6 +60,32 @@ reset_database() {
     echo -e "${GREEN}Database reset complete${NC}"
 }
 
+# Ensures SQL functions exist (idempotent - uses CREATE OR REPLACE)
+ensure_db_functions() {
+    echo -e "\n${BLUE}Ensuring database functions exist...${NC}"
+
+    if ! command -v psql &> /dev/null; then
+        echo -e "${YELLOW}Warning: psql not installed. Skipping function check.${NC}"
+        echo -e "${YELLOW}If you encounter SQL function errors, install psql and restart.${NC}"
+        return 0
+    fi
+
+    # Convert JDBC URL to psql URL
+    PSQL_URL=$(jdbc_to_psql "$DB_URL" "$DB_USERNAME" "$DB_PASSWORD")
+
+    # Apply create_functions.sql (uses CREATE OR REPLACE, so it's safe to run multiple times)
+    if [ -f "infra/db/create_functions.sql" ]; then
+        if psql "$PSQL_URL" -f infra/db/create_functions.sql > /dev/null 2>&1; then
+            echo -e "${GREEN}✓ Database functions are up to date${NC}"
+        else
+            echo -e "${YELLOW}Warning: Could not verify database functions.${NC}"
+            echo -e "${YELLOW}You may need to run: psql \$DATABASE_URL -f infra/db/create_functions.sql${NC}"
+        fi
+    else
+        echo -e "${YELLOW}Warning: create_functions.sql not found${NC}"
+    fi
+}
+
 echo -e "${BLUE}=========================================${NC}"
 echo -e "${BLUE}  Campus Events Platform - Local Dev    ${NC}"
 echo -e "${BLUE}=========================================${NC}"
@@ -197,6 +223,9 @@ echo -e "${BLUE}=========================================${NC}"
 if [ "$RESET_DB" = true ]; then
     reset_database
 fi
+
+# Always ensure SQL functions exist (idempotent operation)
+ensure_db_functions
 
 # Start backend
 echo -e "\n${BLUE}Starting backend on http://localhost:8080${NC}"

@@ -18,10 +18,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * Service that subscribes to Google Cloud Pub/Sub and forwards messages to WebSocket clients.
@@ -168,22 +170,7 @@ public class PubSubSubscriberService {
         try {
             Optional<EventDTO> eventOpt = getEventService().getEventById(eventId);
             if (eventOpt.isPresent()) {
-                EventDTO event = eventOpt.get();
-                Map<String, Object> eventData = new java.util.HashMap<>();
-                eventData.put("id", event.getId());
-                eventData.put("organizerId", event.getOrganizerId());
-                eventData.put("organizerName", event.getOrganizerName() != null ? event.getOrganizerName() : "");
-                eventData.put("campusId", event.getCampusId());
-                eventData.put("campusName", event.getCampusName() != null ? event.getCampusName() : "");
-                eventData.put("capacity", event.getCapacity());
-                eventData.put("description", event.getDescription() != null ? event.getDescription() : "");
-                eventData.put("startTime", event.getStartTime() != null ? event.getStartTime().toString() : "");
-                eventData.put("endTime", event.getEndTime() != null ? event.getEndTime().toString() : "");
-                eventData.put("ticketsSold", event.getTicketsSold());
-                eventData.put("availableCapacity", event.getAvailableCapacity());
-                eventData.put("tags", event.getTags() != null ? event.getTags() : new java.util.ArrayList<>());
-                eventData.put("costs", event.getCosts() != null ? event.getCosts() : new java.util.ArrayList<>());
-                eventPayload.put("event", eventData);
+                eventPayload.put("event", eventToMap(eventOpt.get()));
             }
         } catch (Exception e) {
             logger.warn("Failed to fetch event data for EVENT_CREATED broadcast: {}", e.getMessage());
@@ -228,21 +215,7 @@ public class PubSubSubscriberService {
                 if (organizerId == null) {
                     organizerId = event.getOrganizerId();
                 }
-                Map<String, Object> eventData = new java.util.HashMap<>();
-                eventData.put("id", event.getId());
-                eventData.put("organizerId", event.getOrganizerId());
-                eventData.put("organizerName", event.getOrganizerName() != null ? event.getOrganizerName() : "");
-                eventData.put("campusId", event.getCampusId());
-                eventData.put("campusName", event.getCampusName() != null ? event.getCampusName() : "");
-                eventData.put("capacity", event.getCapacity());
-                eventData.put("description", event.getDescription() != null ? event.getDescription() : "");
-                eventData.put("startTime", event.getStartTime() != null ? event.getStartTime().toString() : "");
-                eventData.put("endTime", event.getEndTime() != null ? event.getEndTime().toString() : "");
-                eventData.put("ticketsSold", event.getTicketsSold());
-                eventData.put("availableCapacity", event.getAvailableCapacity());
-                eventData.put("tags", event.getTags() != null ? event.getTags() : new java.util.ArrayList<>());
-                eventData.put("costs", event.getCosts() != null ? event.getCosts() : new java.util.ArrayList<>());
-                eventPayload.put("event", eventData);
+                eventPayload.put("event", eventToMap(event));
             }
         } catch (Exception e) {
             logger.warn("Failed to fetch event data for EVENT_UPDATED broadcast: {}", e.getMessage());
@@ -450,6 +423,40 @@ public class PubSubSubscriberService {
         if (organizationId != null) {
             messagingTemplate.convertAndSend("/topic/organization/" + organizationId, payload);
         }
+    }
+    
+    /**
+     * Convert an EventDTO to a Map suitable for JSON serialization over WebSocket.
+     * This ensures proper serialization of BigDecimal costs and LocalDateTime fields.
+     */
+    private Map<String, Object> eventToMap(EventDTO event) {
+        Map<String, Object> eventData = new java.util.HashMap<>();
+        eventData.put("id", event.getId());
+        eventData.put("organizerId", event.getOrganizerId());
+        eventData.put("organizerName", event.getOrganizerName() != null ? event.getOrganizerName() : "");
+        eventData.put("campusId", event.getCampusId());
+        eventData.put("campusName", event.getCampusName() != null ? event.getCampusName() : "");
+        eventData.put("capacity", event.getCapacity());
+        eventData.put("description", event.getDescription() != null ? event.getDescription() : "");
+        eventData.put("startTime", event.getStartTime() != null ? event.getStartTime().toString() : "");
+        eventData.put("endTime", event.getEndTime() != null ? event.getEndTime().toString() : "");
+        eventData.put("ticketsSold", event.getTicketsSold() != null ? event.getTicketsSold() : 0L);
+        eventData.put("availableCapacity", event.getAvailableCapacity() != null ? event.getAvailableCapacity() : 0);
+        eventData.put("tags", event.getTags() != null ? event.getTags() : new java.util.ArrayList<>());
+        
+        // Convert costs to simple maps with numeric cost values
+        List<Map<String, Object>> costsData = new java.util.ArrayList<>();
+        if (event.getCosts() != null) {
+            for (var cost : event.getCosts()) {
+                Map<String, Object> costMap = new java.util.HashMap<>();
+                costMap.put("type", cost.getType());
+                costMap.put("cost", cost.getCost() != null ? cost.getCost().doubleValue() : 0.0);
+                costsData.add(costMap);
+            }
+        }
+        eventData.put("costs", costsData);
+        
+        return eventData;
     }
     
     /**
