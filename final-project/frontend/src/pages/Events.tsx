@@ -75,8 +75,8 @@ export const Events = () => {
               ? { 
                   ...e, 
                   ...message.event, 
-                  costs: message.event.costs || e.costs,
-                  tags: message.event.tags || e.tags 
+                  costs: message.event?.costs || e.costs,
+                  tags: message.event?.tags || e.tags 
                 }
               : e
           ));

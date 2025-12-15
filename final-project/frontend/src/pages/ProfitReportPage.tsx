@@ -54,10 +54,6 @@ export const ProfitReportPage = () => {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
   return (
     <div className="min-h-screen bg-stone-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
