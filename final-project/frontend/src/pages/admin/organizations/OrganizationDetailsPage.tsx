@@ -41,9 +41,10 @@ export default function OrganizationDetailsPage() {
             description: message.event.description,
             startTime: message.event.startTime,
             endTime: message.event.endTime,
-            costs: [],
+            costs: message.event.costs || [],
             ticketsSold: message.event.ticketsSold,
             availableCapacity: message.event.availableCapacity,
+            tags: message.event.tags || [],
           };
           setEvents(prev => [newEvent, ...prev]);
           showNotification('New event created!');
@@ -54,7 +55,12 @@ export default function OrganizationDetailsPage() {
         if (message.event) {
           setEvents(prev => prev.map(e =>
             e.id === message.eventId
-              ? { ...e, ...message.event, costs: e.costs }
+              ? { 
+                  ...e, 
+                  ...message.event, 
+                  costs: message.event.costs || e.costs,
+                  tags: message.event.tags || e.tags 
+                }
               : e
           ));
           showNotification('Event updated');
