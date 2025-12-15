@@ -38,6 +38,7 @@ export const Login = () => {
         lastName: response.lastName,
         email: response.email,
         campusId: response.campusId,
+        isAdmin: response.isAdmin || false,
       });
       navigate('/');
     } catch (err: any) {

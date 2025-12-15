@@ -8,6 +8,7 @@ import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { ProfilePage } from './pages/ProfilePage'
 import { MyTicketsPage } from './pages/MyTicketsPage'
+import { ProfitReportPage } from './pages/ProfitReportPage'
 
 // Organization Pages (Milestone 6.1)
 import OrganizationListPage from './pages/admin/organizations/OrganizationListPage'
@@ -295,6 +296,9 @@ function App() {
             </div>
           </PrivateRoute>
         } />
+        
+        {/* Admin Profit Report Route */}
+        <Route path="/admin/profit" element={<PrivateRoute><ProfitReportPage /></PrivateRoute>} />
       </Routes>
     </AuthProvider>
   )

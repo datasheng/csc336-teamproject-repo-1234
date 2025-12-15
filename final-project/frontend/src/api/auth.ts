@@ -25,6 +25,7 @@ export interface AuthResponse {
   firstName: string;
   lastName: string;
   campusId: number;
+  isAdmin?: boolean;
 }
 
 export interface ErrorResponse {

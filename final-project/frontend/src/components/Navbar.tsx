@@ -86,6 +86,14 @@ export const Navbar = () => {
               >
                 My Organizations
               </Link>
+              {user?.isAdmin && (
+                <Link
+                  to="/admin/profit"
+                  className="px-5 py-2.5 text-stone-700 hover:text-orange-600 font-semibold transition-all duration-300 rounded-xl hover:bg-orange-50"
+                >
+                  Profit Report
+                </Link>
+              )}
             </div>
           </div>
 

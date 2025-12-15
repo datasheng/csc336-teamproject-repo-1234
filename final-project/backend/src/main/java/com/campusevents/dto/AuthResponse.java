@@ -13,6 +13,7 @@ public class AuthResponse {
     private String firstName;
     private String lastName;
     private Long campusId;
+    private Boolean isAdmin;
     
     // Default constructor
     public AuthResponse() {}
@@ -24,6 +25,17 @@ public class AuthResponse {
         this.firstName = firstName;
         this.lastName = lastName;
         this.campusId = campusId;
+        this.isAdmin = false;
+    }
+    
+    public AuthResponse(String token, Long userId, String email, String firstName, String lastName, Long campusId, Boolean isAdmin) {
+        this.token = token;
+        this.userId = userId;
+        this.email = email;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.campusId = campusId;
+        this.isAdmin = isAdmin;
     }
     
     // Getters and Setters
@@ -81,5 +93,13 @@ public class AuthResponse {
     
     public void setCampusId(Long campusId) {
         this.campusId = campusId;
+    }
+    
+    public Boolean getIsAdmin() {
+        return isAdmin;
+    }
+    
+    public void setIsAdmin(Boolean isAdmin) {
+        this.isAdmin = isAdmin;
     }
 }

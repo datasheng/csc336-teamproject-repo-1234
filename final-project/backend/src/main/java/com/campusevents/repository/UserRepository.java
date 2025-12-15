@@ -30,7 +30,7 @@ public class UserRepository {
      * @return Optional containing the user if found, empty otherwise
      */
     public Optional<User> findByEmail(String email) {
-        String sql = "SELECT id, first_name, last_name, email, password, campus_id " +
+        String sql = "SELECT id, first_name, last_name, email, password, campus_id, COALESCE(is_admin, FALSE) as is_admin " +
                      "FROM \"user\" WHERE email = ?";
         
         List<Map<String, Object>> results = sqlExecutor.executeQuery(sql, new Object[]{email});
@@ -49,7 +49,7 @@ public class UserRepository {
      * @return Optional containing the user if found, empty otherwise
      */
     public Optional<User> findById(Long id) {
-        String sql = "SELECT id, first_name, last_name, email, password, campus_id " +
+        String sql = "SELECT id, first_name, last_name, email, password, campus_id, COALESCE(is_admin, FALSE) as is_admin " +
                      "FROM \"user\" WHERE id = ?";
         
         List<Map<String, Object>> results = sqlExecutor.executeQuery(sql, new Object[]{id});
@@ -68,15 +68,16 @@ public class UserRepository {
      * @return The saved user with generated ID
      */
     public User save(User user) {
-        String sql = "INSERT INTO \"user\" (first_name, last_name, email, password, campus_id) " +
-                     "VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO \"user\" (first_name, last_name, email, password, campus_id, is_admin) " +
+                     "VALUES (?, ?, ?, ?, ?, ?)";
         
         Long generatedId = sqlExecutor.executeInsert(sql, new Object[]{
             user.getFirstName(),
             user.getLastName(),
             user.getEmail(),
             user.getPassword(),
-            user.getCampusId()
+            user.getCampusId(),
+            user.getIsAdmin() != null ? user.getIsAdmin() : false
         });
         
         user.setId(generatedId);
@@ -143,7 +144,7 @@ public class UserRepository {
      * @return List of users at that campus
      */
     public List<User> findByCampusId(Long campusId) {
-        String sql = "SELECT id, first_name, last_name, email, password, campus_id " +
+        String sql = "SELECT id, first_name, last_name, email, password, campus_id, COALESCE(is_admin, FALSE) as is_admin " +
                      "FROM \"user\" WHERE campus_id = ?";
         
         List<Map<String, Object>> results = sqlExecutor.executeQuery(sql, new Object[]{campusId});
@@ -164,6 +165,17 @@ public class UserRepository {
         user.setEmail((String) row.get("email"));
         user.setPassword((String) row.get("password"));
         user.setCampusId(((Number) row.get("campus_id")).longValue());
+        
+        // Handle is_admin field (may be null for existing records)
+        Object isAdminObj = row.get("is_admin");
+        if (isAdminObj instanceof Boolean) {
+            user.setIsAdmin((Boolean) isAdminObj);
+        } else if (isAdminObj != null) {
+            user.setIsAdmin(((Boolean) isAdminObj));
+        } else {
+            user.setIsAdmin(false);
+        }
+        
         return user;
     }
 }

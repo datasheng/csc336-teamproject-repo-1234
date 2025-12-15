@@ -96,7 +96,8 @@ public class AuthService {
             user.getEmail(),
             user.getFirstName(),
             user.getLastName(),
-            user.getCampusId()
+            user.getCampusId(),
+            user.getIsAdmin() != null ? user.getIsAdmin() : false
         );
     }
     
@@ -139,7 +140,8 @@ public class AuthService {
             user.getEmail(),
             user.getFirstName(),
             user.getLastName(),
-            user.getCampusId()
+            user.getCampusId(),
+            user.getIsAdmin() != null ? user.getIsAdmin() : false
         );
     }
     

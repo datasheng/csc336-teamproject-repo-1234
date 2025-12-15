@@ -14,6 +14,7 @@ public class User {
     private String email;
     private String password;  // BCrypt hashed
     private Long campusId;
+    private Boolean isAdmin;
     
     // Default constructor
     public User() {}
@@ -25,6 +26,7 @@ public class User {
         this.email = email;
         this.password = password;
         this.campusId = campusId;
+        this.isAdmin = false;
     }
     
     // Full constructor
@@ -35,6 +37,18 @@ public class User {
         this.email = email;
         this.password = password;
         this.campusId = campusId;
+        this.isAdmin = false;
+    }
+    
+    // Full constructor with admin
+    public User(Long id, String firstName, String lastName, String email, String password, Long campusId, Boolean isAdmin) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.password = password;
+        this.campusId = campusId;
+        this.isAdmin = isAdmin;
     }
     
     // Getters and Setters
@@ -84,6 +98,14 @@ public class User {
     
     public void setCampusId(Long campusId) {
         this.campusId = campusId;
+    }
+    
+    public Boolean getIsAdmin() {
+        return isAdmin;
+    }
+    
+    public void setIsAdmin(Boolean isAdmin) {
+        this.isAdmin = isAdmin;
     }
     
     @Override

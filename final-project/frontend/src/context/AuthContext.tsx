@@ -7,6 +7,7 @@ interface User {
   lastName: string;
   email: string;
   campusId: number;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
