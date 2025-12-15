@@ -9,6 +9,8 @@ import com.campusevents.dto.UpdateEventRequest;
 import com.campusevents.util.SqlExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -144,8 +146,16 @@ public class EventService {
             saveEventTags(eventId, request.getTags());
         }
         
-        // Publish Pub/Sub message
-        pubSubService.publishEventCreated(eventId, request.getOrganizerId(), request.getCampusId());
+        // Publish Pub/Sub message AFTER transaction commits to ensure event is visible
+        final Long finalEventId = eventId;
+        final Long organizerId = request.getOrganizerId();
+        final Long campusId = request.getCampusId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                pubSubService.publishEventCreated(finalEventId, organizerId, campusId);
+            }
+        });
         
         // Fetch and return the complete event
         return getEventById(eventId).orElseThrow(() -> 
@@ -262,12 +272,19 @@ public class EventService {
             }
         }
         
-        // Publish Pub/Sub message with org info for org page updates
-        if (organizerId != null) {
-            pubSubService.publishEventUpdatedWithOrg(eventId, organizerId);
-        } else {
-            pubSubService.publishEventUpdated(eventId);
-        }
+        // Publish Pub/Sub message AFTER transaction commits
+        final Long finalOrganizerId = organizerId;
+        final Long finalEventId = eventId;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                if (finalOrganizerId != null) {
+                    pubSubService.publishEventUpdatedWithOrg(finalEventId, finalOrganizerId);
+                } else {
+                    pubSubService.publishEventUpdated(finalEventId);
+                }
+            }
+        });
         
         // Fetch and return the updated event
         return getEventById(eventId).orElseThrow(() -> 
@@ -294,26 +311,33 @@ public class EventService {
         Long organizerId = organizerIdOpt.get();
         
         // Use SQL function for cascading delete
+        boolean deleted = false;
         try {
             String sql = "SELECT delete_event_cascade(?)";
             Boolean success = sqlExecutor.executeScalar(sql, new Object[]{eventId.intValue()}, Boolean.class);
-            if (success != null && success) {
-                pubSubService.publishEventDeletedWithOrg(eventId, organizerId, campusId);
-                return true;
-            }
-            return false;
+            deleted = success != null && success;
         } catch (Exception e) {
             // Fallback to direct SQL
             sqlExecutor.executeUpdate("DELETE FROM ticket WHERE event_id = ?", new Object[]{eventId});
             sqlExecutor.executeUpdate("DELETE FROM cost WHERE event_id = ?", new Object[]{eventId});
             sqlExecutor.executeUpdate("DELETE FROM event_tag WHERE event_id = ?", new Object[]{eventId});
             int rowsAffected = sqlExecutor.executeUpdate("DELETE FROM event WHERE id = ?", new Object[]{eventId});
-            if (rowsAffected > 0) {
-                pubSubService.publishEventDeletedWithOrg(eventId, organizerId, campusId);
-                return true;
-            }
-            return false;
+            deleted = rowsAffected > 0;
         }
+        
+        if (deleted) {
+            // Publish AFTER transaction commits
+            final Long finalEventId = eventId;
+            final Long finalOrganizerId = organizerId;
+            final Long finalCampusId = campusId;
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    pubSubService.publishEventDeletedWithOrg(finalEventId, finalOrganizerId, finalCampusId);
+                }
+            });
+        }
+        return deleted;
     }
     
     /**
@@ -338,8 +362,16 @@ public class EventService {
         String updateSql = "UPDATE event SET description = CONCAT('[CANCELLED] ', description) WHERE id = ? AND description NOT LIKE '[CANCELLED]%'";
         sqlExecutor.executeUpdate(updateSql, new Object[]{eventId});
         
-        // Publish real-time update
-        pubSubService.publishEventCancelledWithOrg(eventId, organizerId, campusId);
+        // Publish real-time update AFTER transaction commits
+        final Long finalEventId = eventId;
+        final Long finalOrganizerId = organizerId;
+        final Long finalCampusId = campusId;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                pubSubService.publishEventCancelledWithOrg(finalEventId, finalOrganizerId, finalCampusId);
+            }
+        });
         
         return getEventById(eventId).orElseThrow(() -> 
             new RuntimeException("Failed to retrieve cancelled event"));
