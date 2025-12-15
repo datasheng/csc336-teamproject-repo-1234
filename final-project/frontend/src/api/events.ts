@@ -38,8 +38,11 @@ export interface ErrorResponse {
   status: number;
 }
 
+// Use VITE_API_URL from .env.production for prod, fallback to /api for local dev
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
